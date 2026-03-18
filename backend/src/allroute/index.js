@@ -2,8 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
-const connectDB = require('./config/db');
-const initSocket = require('./sockets');
+const connectDB = require('../config/database');
+const initSocket = require('../sockets');
 
 const app = express();
 const server = http.createServer(app);
@@ -16,9 +16,9 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/users', require('./routes/users'));
-app.use('/api/rides', require('./routes/rides'));
+app.use('/api/auth', require('../routes/authRoutes'));
+app.use('/api/users', require('../routes/users'));
+app.use('/api/rides', require('../routes/rides'));
 
 // Socket.IO
 initSocket(server);

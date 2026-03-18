@@ -119,6 +119,10 @@ dist
 # Firebase cache directory
 .firebase/
 
+# Firebase service account key
+firebase-service-account.json
+limousine-booking-app-firebase-adminsdk-fbsvc-31bebe3d5c.json
+
 # TernJS port file
 .tern-port
 
@@ -137,3 +141,4 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+

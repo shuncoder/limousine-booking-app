@@ -42,13 +42,3 @@ limousine-booking-app/
 └── LICENSE
 ```
 
-## Hướng dẫn nhanh
-
-1. Cài đặt dependencies:
-	- Backend: `cd backend && npm install`
-	- Frontend: `cd mobile && npm install`
-2. Khởi động backend và MongoDB:
-	- Ở thư mục gốc: `docker-compose up`
-3. Khởi động app di động:
-	- `cd mobile && npm start`
-

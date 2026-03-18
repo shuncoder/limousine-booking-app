@@ -1,30 +1,41 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
-import { login } from '../services/api';
+import { verifyPhone } from '../services/api';
 
 export default function LoginScreen({ navigation }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
+  const [step, setStep] = useState(1);
   const [error, setError] = useState('');
 
-  const handleLogin = async () => {
+  // Giả lập lấy firebaseToken từ OTP
+  const getFirebaseToken = async (phone, otp) => {
+    // TODO: Tích hợp Firebase Auth để lấy token
+    return 'firebaseToken';
+  };
+
+  const handleVerify = async () => {
     try {
-      const { token } = await login(email, password);
-      // Save token to state or storage
-      navigation.replace('Home');
+      const firebaseToken = await getFirebaseToken(phone, otp);
+      const res = await verifyPhone(firebaseToken);
+      if (res.isNew) {
+        navigation.replace('Register', { firebaseToken });
+      } else {
+        // Save token, chuyển sang Home
+        navigation.replace('Home');
+      }
     } catch (err) {
-      setError('Invalid credentials');
+      setError('Xác thực thất bại');
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
+      <Text style={styles.title}>Đăng nhập bằng số điện thoại</Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <TextInput placeholder="Email" value={email} onChangeText={setEmail} style={styles.input} />
-      <TextInput placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry style={styles.input} />
-      <Button title="Login" onPress={handleLogin} />
-      <Button title="Register" onPress={() => navigation.navigate('Register')} />
+      <TextInput placeholder="Số điện thoại" value={phone} onChangeText={setPhone} style={styles.input} keyboardType="phone-pad" />
+      <TextInput placeholder="OTP" value={otp} onChangeText={setOtp} style={styles.input} keyboardType="number-pad" />
+      <Button title="Tiếp tục" onPress={handleVerify} />
     </View>
   );
 }

@@ -6,13 +6,13 @@ const api = axios.create({
   baseURL: API_URL,
 });
 
-export const login = async (email, password) => {
-  const res = await api.post('/auth/login', { email, password });
+export const verifyPhone = async (firebaseToken) => {
+  const res = await api.post('/auth/verify-phone', { firebaseToken });
   return res.data;
 };
 
-export const register = async (name, email, password, role) => {
-  const res = await api.post('/auth/register', { name, email, password, role });
+export const register = async (firebaseToken, name) => {
+  const res = await api.post('/auth/register', { firebaseToken, name });
   return res.data;
 };
 
@@ -34,13 +34,6 @@ export const bookRide = async (token, pickupLocation, dropoffLocation) => {
 
 export const getRideHistory = async (token) => {
   const res = await api.get('/rides/history', {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return res.data;
-};
-
-export const getRideById = async (token, id) => {
-  const res = await api.get(`/rides/${id}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.data;

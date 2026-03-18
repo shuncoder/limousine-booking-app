@@ -1,32 +1,45 @@
 const User = require('../models/User');
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-exports.register = async (req, res) => {
-  const { name, email, password, role } = req.body;
+// Xác thực Firebase token
+const admin = require('firebase-admin');
+
+exports.verifyPhone = async (req, res) => {
+  const { firebaseToken } = req.body;
   try {
-    let user = await User.findOne({ email });
-    if (user) return res.status(400).json({ msg: 'User already exists' });
-    user = new User({ name, email, password: await bcrypt.hash(password, 10), role });
-    await user.save();
+    // Xác thực token từ Firebase
+    const decoded = await admin.auth().verifyIdToken(firebaseToken);
+    const phoneNumber = decoded.phone_number;
+    if (!phoneNumber) return res.status(400).json({ msg: 'Invalid phone number' });
+
+    let user = await User.findOne({ phone: phoneNumber });
+    if (!user) {
+      // User mới, yêu cầu nhập tên
+      return res.status(200).json({ isNew: true });
+    }
+    // User đã tồn tại, trả về token
     const payload = { user: { id: user.id, role: user.role } };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token });
+    res.json({ token, user });
   } catch (err) {
-    res.status(500).send('Server error');
+    res.status(401).json({ msg: 'Firebase token invalid' });
   }
 };
 
-exports.login = async (req, res) => {
-  const { email, password } = req.body;
+exports.register = async (req, res) => {
+  const { firebaseToken, name } = req.body;
   try {
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ msg: 'Invalid credentials' });
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ msg: 'Invalid credentials' });
+    const decoded = await admin.auth().verifyIdToken(firebaseToken);
+    const phoneNumber = decoded.phone_number;
+    if (!phoneNumber) return res.status(400).json({ msg: 'Invalid phone number' });
+
+    let user = await User.findOne({ phone: phoneNumber });
+    if (user) return res.status(400).json({ msg: 'User already exists' });
+    user = new User({ name, phone: phoneNumber });
+    await user.save();
     const payload = { user: { id: user.id, role: user.role } };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token });
+    res.json({ token, user });
   } catch (err) {
     res.status(500).send('Server error');
   }
