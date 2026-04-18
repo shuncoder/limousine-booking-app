@@ -7,8 +7,7 @@
 - **MongoDB**: Cơ sở dữ liệu NoSQL, lưu trữ thông tin người dùng, chuyến đi.
 - **Mongoose**: Quản lý schema, validate và thao tác dữ liệu MongoDB.
 - **JWT (JSON Web Token)**: Xác thực và phân quyền người dùng qua token.
-- **Socket.IO**: Giao tiếp realtime (vị trí tài xế, trạng thái chuyến đi).
-- **Docker**: Đóng gói backend và MongoDB thành container, dễ triển khai.
+- **Socket.IO**: Giao tiếp realtime (trạng thái chuyến đi).
 
 ## Thư mục chính
 
@@ -25,5 +24,4 @@
 ```bash
 cd backend
 npm install
-docker-compose up
 ```

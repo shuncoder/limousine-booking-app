@@ -1,31 +1,33 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
 import { getRideHistory } from '../services/api';
+import { colors, spacing, radius } from "../theme/theme";
 
 export default function RideHistoryScreen() {
   const [rides, setRides] = useState([]);
 
   useEffect(() => {
     const fetchRides = async () => {
-      // Replace with actual token management
-      const token = '';
-      const data = await getRideHistory(token);
+      const data = await getRideHistory();
       setRides(data);
     };
     fetchRides();
   }, []);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Ride History</Text>
+    <View style={styles.screen}>
+      <Text style={styles.title}>Lịch sử chuyến</Text>
       <FlatList
         data={rides}
         keyExtractor={item => item._id}
+        contentContainerStyle={styles.list}
         renderItem={({ item }) => (
           <View style={styles.rideItem}>
-            <Text>Pickup: {item.pickupLocation}</Text>
-            <Text>Dropoff: {item.dropoffLocation}</Text>
-            <Text>Status: {item.status}</Text>
+            <Text style={styles.label}>Điểm đón</Text>
+            <Text style={styles.value}>{item.pickupLocation}</Text>
+            <Text style={[styles.label, { marginTop: spacing.sm }]}>Điểm đến</Text>
+            <Text style={styles.value}>{item.dropoffLocation}</Text>
+            <Text style={styles.meta}>Trạng thái: {item.status}</Text>
           </View>
         )}
       />
@@ -34,7 +36,26 @@ export default function RideHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  title: { fontSize: 22, marginBottom: 20, textAlign: 'center' },
-  rideItem: { padding: 10, borderBottomWidth: 1, borderColor: '#eee' }
+  screen: { flex: 1, backgroundColor: colors.bg },
+  title: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: "900",
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+  },
+  list: {
+    padding: spacing.xl,
+    gap: spacing.md,
+  },
+  rideItem: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+  },
+  label: { color: colors.muted, fontSize: 12, fontWeight: "700" },
+  value: { color: colors.text, marginTop: spacing.xs, fontSize: 15, fontWeight: "700" },
+  meta: { color: colors.muted, marginTop: spacing.md, fontWeight: "600" },
 });

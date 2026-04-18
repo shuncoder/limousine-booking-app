@@ -141,4 +141,7 @@ limousine-booking-app-firebase-adminsdk-fbsvc-31bebe3d5c.json
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
-
+#Limousine booking app logs
+logs
+*.log
+.expo/
