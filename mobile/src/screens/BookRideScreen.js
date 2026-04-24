@@ -8,6 +8,8 @@ import TextField from "../components/ui/TextField";
 import GlassCard from '../components/ui/GlassCard';
 
 const DROPDOWN_Z_INDEX = 20;
+const TRIP_PAGE_LIMIT = 100;
+const MAX_TRIP_PAGES = 50;
 
 export default function BookRideScreen({ navigation }) {
   const [pickup, setPickup] = useState('');
@@ -27,15 +29,14 @@ export default function BookRideScreen({ navigation }) {
         const allTrips = [];
         let page = 1;
         let total = 0;
-        const limit = 100;
 
         do {
-          const response = await listTrips({ page, limit });
+          const response = await listTrips({ page, limit: TRIP_PAGE_LIMIT });
           const items = Array.isArray(response?.items) ? response.items : [];
           allTrips.push(...items);
           total = Number(response?.total) || allTrips.length;
           page += 1;
-        } while (allTrips.length < total && page <= 50);
+        } while (allTrips.length < total && page <= MAX_TRIP_PAGES);
 
         const uniqueDestinations = [...new Set(
           allTrips
@@ -46,7 +47,8 @@ export default function BookRideScreen({ navigation }) {
         if (mounted) {
           setDestinationOptions(uniqueDestinations);
         }
-      } catch {
+      } catch (error) {
+        console.error('Không tải được danh sách điểm đến:', error);
         if (mounted) setDestinationOptions([]);
       } finally {
         if (mounted) setLoadingDestinations(false);
