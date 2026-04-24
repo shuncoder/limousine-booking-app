@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { startEmailOtp, verifyEmailOtp } from '../services/api';
-import { colors, spacing, radius } from "../theme/theme";
+import { colors, spacing } from "../theme/theme";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import TextField from "../components/ui/TextField";
-import { setToken } from "../services/tokenStorage";
+import { setTokens } from "../services/tokenStorage";
+import AppBackground from '../components/ui/AppBackground';
+import GlassCard from '../components/ui/GlassCard';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -18,7 +20,6 @@ export default function LoginScreen({ navigation }) {
     try {
       setError("");
       setLoading(true);
-      console.log("CALL API:", email);
       const res = await startEmailOtp(email);
       console.log("RESPONSE:", res);
       setIsNew(!!res.isNew);
@@ -39,10 +40,10 @@ export default function LoginScreen({ navigation }) {
       const res = await verifyEmailOtp(email, otp);
       console.log("VERIFY RESPONSE:", res);
       if (res.isNew) {
-        navigation.replace("Register", { onboardingToken: res.token, email });
+        navigation.navigate("Register", { onboardingToken: res.token, email });
       } else {
-        await setToken(res.token);
-        navigation.replace("Home");
+        await setTokens(res.token);
+        navigation.replace("Main");
       }
     } catch (err) {
       console.log("ERROR VERIFY:", err.response?.data || err.message);
@@ -53,80 +54,94 @@ export default function LoginScreen({ navigation }) {
   };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <View style={styles.screen}>
-        <View style={styles.card}>
-          <Text style={styles.title}>Limousine Booking</Text>
-          <Text style={styles.subtitle}>Đăng nhập bằng email</Text>
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+    <AppBackground>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View style={styles.screen}>
+          <GlassCard style={styles.card}>
+            <Text style={styles.badge}>Xin Chào Quý Khách !</Text>
+            <Text style={styles.title}>Ứng Dụng Đặt Vé Xe Limousine Online</Text>
+            <Text style={styles.subtitle}>Đăng nhập bằng email</Text>
+            {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          {step === 1 ? (
-            <>
-              <TextField
-                label="Gmail"
-                placeholder="example@gmail.com"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                returnKeyType="done"
-                onSubmitEditing={Keyboard.dismiss}
-              />
-              <PrimaryButton
-                title="Tiếp tục"
-                onPress={handleContinueEmail}
-                loading={loading}
-                disabled={!email}
-              />
-            </>
-          ) : (
-            <>
-              <Text style={styles.helper}>
-                {isNew ? "Email mới" : "Email đã tồn tại"} • Nhập OTP để tiếp tục
-              </Text>
-              <TextField
-                label="OTP"
-                placeholder="6 chữ số"
-                value={otp}
-                onChangeText={setOtp}
-                keyboardType="number-pad"
-                autoCapitalize="none"
-                returnKeyType="done"
-                onSubmitEditing={Keyboard.dismiss}
-              />
-              <PrimaryButton
-                title="Xác nhận OTP"
-                onPress={handleVerifyOtp}
-                loading={loading}
-                disabled={!otp}
-              />
-            </>
-          )}
+            {step === 1 ? (
+              <>
+                <TextField
+                  label="Gmail"
+                  placeholder="example@gmail.com"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  returnKeyType="done"
+                  onSubmitEditing={Keyboard.dismiss}
+                />
+                <PrimaryButton
+                  title="Nhận mã OTP"
+                  onPress={handleContinueEmail}
+                  loading={loading}
+                  disabled={!email || loading}
+                />
+              </>
+            ) : (
+              <>
+                <Text style={styles.helper}>
+                  {isNew ? "Xin Chào " : "Chào Mừng Quý Khách Trở Lại"} • Nhập OTP để tiếp tục
+                </Text>
+                <TextField
+                  label="OTP"
+                  placeholder="6 chữ số"
+                  value={otp}
+                  onChangeText={setOtp}
+                  keyboardType="number-pad"
+                  autoCapitalize="none"
+                  returnKeyType="done"
+                  onSubmitEditing={Keyboard.dismiss}
+                />
+                <PrimaryButton
+                  title="Xác nhận OTP"
+                  onPress={handleVerifyOtp}
+                  loading={loading}
+                  disabled={!otp}
+                />
+              </>
+            )}
+          </GlassCard>
         </View>
-      </View>
-    </TouchableWithoutFeedback>
+      </TouchableWithoutFeedback>
+    </AppBackground>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
     justifyContent: "center",
     padding: spacing.xl,
   },
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.xl,
+    maxWidth: 520,
+    width: "100%",
+    alignSelf: "center",
+  },
+  badge: {
+    color: "rgba(234,240,255,0.95)",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    marginBottom: spacing.sm,
+    textTransform: "uppercase",
   },
   title: { color: colors.text, fontSize: 22, fontWeight: "800" },
-  subtitle: { color: colors.muted, marginTop: spacing.xs, marginBottom: spacing.lg },
+  subtitle: { color: "rgba(234,240,255,0.78)", marginTop: spacing.xs, marginBottom: spacing.lg },
   helper: { color: colors.muted, marginBottom: spacing.md, fontWeight: "600" },
   error: {
-    color: colors.danger,
+    color: "#FFD6DA",
+    backgroundColor: "rgba(239,68,68,0.25)",
+    borderWidth: 1,
+    borderColor: "rgba(255,208,214,0.6)",
+    borderRadius: 12,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     marginBottom: spacing.md,
     fontWeight: "600",
   },

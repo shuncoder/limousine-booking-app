@@ -1,3 +1,31 @@
+# Web Admin - Limousine Booking
+
+> Dashboard quản trị người dùng, chuyến đi, thống kê, quản lý tài khoản.
+
+## Công nghệ chính
+- Next.js 16 (App Router)
+- React 19, TypeScript
+- Tailwind CSS v4
+
+## Cấu trúc thư mục
+- `src/app/(admin)/`: Trang quản trị
+- `src/components/`: UI, bảng, biểu đồ
+- `src/lib/`: API helper
+
+## Hướng dẫn cài đặt
+```bash
+cd webadmin
+npm install
+npm run dev
+```
+
+## Chức năng chính
+- Đăng nhập admin
+- Quản lý user, ride, thống kê
+- Kết nối backend qua REST API
+
+## License
+MIT
 # XeAdmin
 
 XeAdmin is an admin dashboard starter built with:

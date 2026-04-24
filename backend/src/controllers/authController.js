@@ -1,7 +1,9 @@
 const User = require('../models/User');
+const AdminProfile = require('../models/AdminProfile');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { hasMailerConfig, sendOtpEmail } = require('../config/mailer');
+const { createAdminLog } = require('../utils/adminAudit');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-jwt-secret';
 
@@ -69,42 +71,61 @@ exports.getCurrentUser = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ msg: 'User not found' });
-    res.json(user);
+
+    let adminProfile = null;
+    if (['admin', 'staff'].includes(String(user.role || ''))) {
+      adminProfile = await AdminProfile.findOne({ userId: user.id });
+    }
+
+    res.json({
+      id: user.id,
+      username: user.username || null,
+      email: user.email,
+      role: user.role,
+      name: adminProfile?.fullName || user.name || '',
+      adminProfile: adminProfile
+        ? {
+            id: adminProfile.id,
+            fullName: adminProfile.fullName,
+          }
+        : null,
+    });
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });
   }
 };
 
-// Admin email/password login (single admin account)
 exports.adminLogin = async (req, res) => {
   try {
-    const { email, password } = req.body || {};
-    if (!email || !password) {
-      return res.status(400).json({ msg: 'Email and password are required' });
+    const { username, password } = req.body || {};
+    if (!username || !password) {
+      return res.status(400).json({ msg: 'Username and password are required' });
     }
 
-    const normalizedEmail = String(email).trim().toLowerCase();
-
-    const adminCount = await User.countDocuments({ role: 'admin' });
-    if (adminCount !== 1) {
-      return res.status(403).json({ msg: 'Admin access is not configured' });
-    }
-
-    const user = await User.findOne({ email: normalizedEmail, role: 'admin' }).select('+passwordHash');
+    const normalizedUsername = String(username).trim();
+    const user = await User.findOne({
+      $or: [{ username: normalizedUsername }, { name: normalizedUsername }],
+      role: { $in: ['admin', 'staff'] },
+    }).select('+passwordHash');
     if (!user || !user.passwordHash) {
       return res.status(401).json({ msg: 'Invalid credentials' });
     }
 
     const ok = await bcrypt.compare(String(password), user.passwordHash);
-    if (!ok) return res.status(401).json({ msg: 'Invalid credentials' });
+    if (!ok) {
+      return res.status(401).json({ msg: 'Invalid credentials' });
+    }
 
-    const payload = { user: { id: user.id, role: 'admin' } };
+    const adminProfile = await AdminProfile.findOne({ userId: user.id });
+
+    const payload = { user: { id: user.id, role: user.role } };
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
     res.json({
       token,
       user: {
         id: user.id,
-        name: user.name,
+        username: user.username || normalizedUsername,
+        name: adminProfile?.fullName || user.name || '',
         email: user.email,
         role: user.role,
         avatar: user.avatar ?? null,
@@ -256,6 +277,48 @@ exports.completeProfile = async (req, res) => {
     });
   } catch (err) {
     console.error('completeProfile error', err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+exports.updateAdminProfile = async (req, res) => {
+  try {
+    if (!req.user?.id) return res.status(401).json({ msg: 'Unauthorized' });
+
+    const cleanName = String(req.body?.name || '').trim();
+    if (!cleanName) return res.status(400).json({ msg: 'Name is required' });
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+    if (!['admin', 'staff'].includes(String(user.role || ''))) {
+      return res.status(403).json({ msg: 'Forbidden' });
+    }
+
+    const profile = await AdminProfile.findOneAndUpdate(
+      { userId: user.id },
+      { $set: { fullName: cleanName } },
+      { new: true, upsert: true }
+    );
+
+    await createAdminLog({
+      adminUserId: user.id,
+      action: 'update',
+      entityType: 'admin_profile',
+      entityId: profile.id,
+      details: `Updated full name to ${cleanName}`,
+    });
+
+    res.json({
+      ok: true,
+      user: {
+        id: user.id,
+        username: user.username || null,
+        name: profile.fullName,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (err) {
     res.status(500).json({ msg: 'Server error' });
   }
 };

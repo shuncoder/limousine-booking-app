@@ -1,4 +1,5 @@
 "use client";
+
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
@@ -9,22 +10,40 @@ import { setToken } from "@/lib/auth";
 
 export default function SignInForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!username || !password) {
+      setError("Vui lòng nhập đầy đủ thông tin");
+      return;
+    }
+
     setError(null);
     setIsSubmitting(true);
+
     try {
-      const data = await adminLogin(email, password);
+      // 🔥 gọi API với username
+      const data = await adminLogin(username, password);
+
+      // lưu token
       setToken(data.token);
+
+      // lấy thông tin user
       const me = await getMe(data.token);
-      if (me?.role !== "admin") {
-        throw { msg: "Forbidden" };
+
+      // check quyền
+      if (!me?.role || !["admin", "staff"].includes(me.role)) {
+        throw { msg: "Bạn không có quyền truy cập" };
       }
+
+      // chuyển trang
       router.replace("/");
     } catch (err: unknown) {
       const msg =
@@ -33,6 +52,7 @@ export default function SignInForm() {
           : typeof err === "object" && err !== null && "message" in err
           ? String((err as { message?: unknown }).message || "")
           : "";
+
       setError(msg || "Đăng nhập thất bại");
     } finally {
       setIsSubmitting(false);
@@ -48,48 +68,55 @@ export default function SignInForm() {
               Đăng Nhập Quản Trị Viên XeAdmin
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Đăng nhập tài khoản quản trị viên ứng dụng đặt xe limousine
+              Đăng nhập bằng username để quản lý hệ thống
             </p>
           </div>
-          <div>
-            <form onSubmit={onSubmit}>
-              <div className="space-y-6">
-                <div>
-                  <Label>
-                    Email <span className="text-error-500">*</span>{" "}
-                  </Label>
-                  <Input
-                    placeholder="admin@gmail.com"
-                    type="email"
-                    defaultValue={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>
-                    Password <span className="text-error-500">*</span>{" "}
-                  </Label>
-                  <Input
-                    type="password"
-                    placeholder="••••••••"
-                    defaultValue={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </div>
-                {error ? (
-                  <div className="rounded-lg border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-800 dark:bg-error-950/40 dark:text-error-200">
-                    {error}
-                  </div>
-                ) : null}
-                <div>
-                  <Button className="w-full" size="sm" disabled={isSubmitting}>
-                    {isSubmitting ? "Signing in..." : "Sign in"}
-                  </Button>
-                </div>
-              </div>
-            </form>
 
-          </div>
+          <form onSubmit={onSubmit}>
+            <div className="space-y-6">
+              
+              {/* USERNAME */}
+              <div>
+                <Label>
+                  Username <span className="text-error-500">*</span>
+                </Label>
+                <Input
+                  type="text"
+                  placeholder="admin123"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+              </div>
+
+              {/* PASSWORD */}
+              <div>
+                <Label>
+                  Password <span className="text-error-500">*</span>
+                </Label>
+                <Input
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+
+              {/* ERROR */}
+              {error && (
+                <div className="rounded-lg border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-800 dark:bg-error-950/40 dark:text-error-200">
+                  {error}
+                </div>
+              )}
+
+              {/* BUTTON */}
+              <div>
+                <Button className="w-full" size="sm" disabled={isSubmitting}>
+                  {isSubmitting ? "Đang đăng nhập..." : "Đăng nhập"}
+                </Button>
+              </div>
+            </div>
+          </form>
+
         </div>
       </div>
     </div>

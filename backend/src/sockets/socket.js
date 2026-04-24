@@ -1,10 +1,22 @@
 const { Server } = require('socket.io');
 
+let io;
+
 function initSocket(server) {
-  const io = new Server(server, { cors: { origin: '*' } });
+  io = new Server(server, { cors: { origin: '*' } });
 
   io.on('connection', (socket) => {
     console.log('Socket connected:', socket.id);
+
+    socket.on('join_trip', ({ tripId }) => {
+      if (!tripId) return;
+      socket.join(`trip:${tripId}`);
+    });
+
+    socket.on('leave_trip', ({ tripId }) => {
+      if (!tripId) return;
+      socket.leave(`trip:${tripId}`);
+    });
 
     socket.on('ride_request', (data) => {
       io.emit('ride_request', data);
@@ -23,6 +35,12 @@ function initSocket(server) {
       console.log('Socket disconnected:', socket.id);
     });
   });
+
+  return io;
 }
 
-module.exports = initSocket;
+function getIO() {
+  return io;
+}
+
+module.exports = { initSocket, getIO };

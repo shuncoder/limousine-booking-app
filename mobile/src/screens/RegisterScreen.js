@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { completeProfile } from '../services/api';
-import { colors, spacing, radius } from "../theme/theme";
+import { colors, spacing } from "../theme/theme";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import TextField from "../components/ui/TextField";
-import { setToken } from "../services/tokenStorage";
+import { setTokens } from "../services/tokenStorage";
+import AppBackground from '../components/ui/AppBackground';
+import GlassCard from '../components/ui/GlassCard';
 
 export default function RegisterScreen({ navigation, route }) {
   const [name, setName] = useState('');
@@ -17,8 +19,8 @@ export default function RegisterScreen({ navigation, route }) {
     try {
       setLoading(true);
       const res = await completeProfile(onboardingToken, name, phone);
-      await setToken(res.token);
-      navigation.replace('Home');
+      await setTokens(res.token);
+      navigation.replace('Main');
     } catch (err) {
       setError('Đăng ký thất bại');
     } finally {
@@ -27,61 +29,75 @@ export default function RegisterScreen({ navigation, route }) {
   };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <View style={styles.screen}>
-        <View style={styles.card}>
-          <Text style={styles.title}>Tạo tài khoản</Text>
-          <Text style={styles.subtitle}>Nhập thông tin để hoàn tất đăng ký</Text>
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          <TextField
-            label="Họ và tên"
-            placeholder="Ví dụ: Nguyễn Văn A"
-            value={name}
-            onChangeText={setName}
-            autoCapitalize="words"
-            returnKeyType="next"
-          />
-          <TextField
-            label="Số điện thoại"
-            placeholder="Ví dụ: 0901234567"
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-            autoCapitalize="none"
-            returnKeyType="done"
-            onSubmitEditing={Keyboard.dismiss}
-          />
-          <PrimaryButton
-            title="Đăng ký"
-            onPress={handleRegister}
-            loading={loading}
-            disabled={!name || !phone || !onboardingToken}
-            variant="success"
-          />
+    <AppBackground>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View style={styles.screen}>
+          <GlassCard style={styles.card}>
+            <Text style={styles.badge}>Complete Profile</Text>
+            <Text style={styles.title}>Tạo tài khoản</Text>
+            <Text style={styles.subtitle}>Nhập thông tin để hoàn tất đăng ký</Text>
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+            <TextField
+              label="Họ và tên"
+              placeholder="Ví dụ: Nguyễn Văn A"
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+              returnKeyType="next"
+            />
+            <TextField
+              label="Số điện thoại"
+              placeholder="Ví dụ: 0901234567"
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+              autoCapitalize="none"
+              returnKeyType="done"
+              onSubmitEditing={Keyboard.dismiss}
+            />
+            <PrimaryButton
+              title="Hoàn tất đăng ký"
+              onPress={handleRegister}
+              loading={loading}
+              disabled={!name || !phone || !onboardingToken}
+              variant="success"
+            />
+          </GlassCard>
         </View>
-      </View>
-    </TouchableWithoutFeedback>
+      </TouchableWithoutFeedback>
+    </AppBackground>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
     justifyContent: "center",
     padding: spacing.xl,
   },
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.xl,
+    maxWidth: 520,
+    width: "100%",
+    alignSelf: "center",
+  },
+  badge: {
+    color: "rgba(234,240,255,0.95)",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    marginBottom: spacing.sm,
+    textTransform: "uppercase",
   },
   title: { color: colors.text, fontSize: 22, fontWeight: "800" },
-  subtitle: { color: colors.muted, marginTop: spacing.xs, marginBottom: spacing.lg },
+  subtitle: { color: "rgba(234,240,255,0.78)", marginTop: spacing.xs, marginBottom: spacing.lg },
   error: {
-    color: colors.danger,
+    color: "#FFD6DA",
+    backgroundColor: "rgba(239,68,68,0.25)",
+    borderWidth: 1,
+    borderColor: "rgba(255,208,214,0.6)",
+    borderRadius: 12,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     marginBottom: spacing.md,
     fontWeight: "600",
   },

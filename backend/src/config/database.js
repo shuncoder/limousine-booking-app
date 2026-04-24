@@ -7,8 +7,6 @@ const connectDB = async () => {
       useUnifiedTopology: true
     });
     console.log('MongoDB connected');
-
-    // Project safety: remove accidental unique index on phone (allows many null/missing)
     try {
       await mongoose.connection.collection('users').dropIndex('phone_1');
     } catch (e) {

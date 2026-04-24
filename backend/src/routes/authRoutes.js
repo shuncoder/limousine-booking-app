@@ -9,6 +9,7 @@ const {
   startEmailOtp,
   verifyEmailOtp,
   completeProfile,
+  updateAdminProfile,
 } = require('../controllers/authController');
 const auth = require('../middlewares/authMiddleware');
 
@@ -29,6 +30,7 @@ router.get('/me', auth, getCurrentUser);
 
 // Admin login (email/password)
 router.post('/admin/login', adminLogin);
+router.patch('/admin/profile', auth, updateAdminProfile);
 
 // Mobile email + OTP flow
 router.post('/email/start', startEmailOtp);

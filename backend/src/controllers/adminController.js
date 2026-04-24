@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const Ride = require('../models/Ride');
+const AdminNotification = require('../models/AdminNotification');
+const { createAdminLog } = require('../utils/adminAudit');
 
 function toInt(value, fallback) {
   const n = Number.parseInt(String(value ?? ''), 10);
@@ -30,18 +32,25 @@ exports.listUsers = async (req, res) => {
 exports.updateUserRole = async (req, res) => {
   try {
     const { role } = req.body;
-    const allowed = ['user', 'driver', 'admin'];
+    const allowed = ['user', 'driver', 'staff', 'admin'];
     if (!allowed.includes(role)) {
       return res.status(400).json({ msg: 'Invalid role' });
     }
 
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { role },
-      { new: true }
-    ).select('-googleId');
+    const before = await User.findById(req.params.id).select('-googleId');
+    if (!before) return res.status(404).json({ msg: 'User not found' });
 
-    if (!user) return res.status(404).json({ msg: 'User not found' });
+    const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true }).select('-googleId');
+
+    await createAdminLog({
+      adminUserId: req.user.id,
+      action: 'update',
+      entityType: 'user_role',
+      entityId: user.id,
+      details: `Changed role of ${user.email} from ${before.role} to ${role}`,
+      metadata: { fromRole: before.role, toRole: role },
+    });
+
     res.json(user);
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });
@@ -95,7 +104,38 @@ exports.updateRide = async (req, res) => {
       .populate('driverId', 'name email phone role avatar');
 
     if (!ride) return res.status(404).json({ msg: 'Ride not found' });
+
+    await createAdminLog({
+      adminUserId: req.user.id,
+      action: 'update',
+      entityType: 'ride',
+      entityId: ride.id,
+      details: `Updated ride ${ride.id}`,
+      metadata: patch,
+    });
+
     res.json(ride);
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+exports.listAdminNotifications = async (req, res) => {
+  try {
+    const page = Math.max(1, toInt(req.query.page, 1));
+    const limit = Math.min(100, Math.max(1, toInt(req.query.limit, 20)));
+    const skip = (page - 1) * limit;
+
+    const [items, total] = await Promise.all([
+      AdminNotification.find({})
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('adminUserId', 'username email role'),
+      AdminNotification.countDocuments({}),
+    ]);
+
+    res.json({ items, page, limit, total });
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });
   }

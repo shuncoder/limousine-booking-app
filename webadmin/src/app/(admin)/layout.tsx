@@ -26,7 +26,7 @@ export default function AdminLayout({
       }
       try {
         const me = await getMe(token);
-        if (me?.role !== "admin") throw new Error("forbidden");
+        if (!me?.role || !["admin", "staff"].includes(me.role)) throw new Error("forbidden");
       } catch {
         clearToken();
         router.replace("/signin");

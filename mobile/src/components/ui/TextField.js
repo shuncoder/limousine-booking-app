@@ -37,17 +37,17 @@ export default function TextField({
 const styles = StyleSheet.create({
   wrap: { marginBottom: spacing.md },
   label: {
-    color: colors.muted,
+    color: "rgba(234,240,255,0.88)",
     marginBottom: spacing.xs,
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   input: {
     height: 48,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(255,255,255,0.14)",
     paddingHorizontal: spacing.lg,
     color: colors.text,
     fontSize: 15,

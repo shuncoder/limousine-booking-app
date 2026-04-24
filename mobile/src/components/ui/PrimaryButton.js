@@ -16,7 +16,11 @@ export default function PrimaryButton({
       disabled={disabled || loading}
       style={({ pressed }) => [
         styles.btn,
-        { backgroundColor: bg, opacity: disabled || loading ? 0.6 : pressed ? 0.9 : 1 },
+        {
+          backgroundColor: bg,
+          opacity: disabled || loading ? 0.58 : pressed ? 0.9 : 1,
+          transform: [{ scale: pressed ? 0.99 : 1 }],
+        },
       ]}
     >
       {loading ? (
@@ -35,6 +39,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.lg,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.22)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.24,
+    shadowRadius: 12,
+    elevation: 5,
   },
   text: {
     color: colors.text,

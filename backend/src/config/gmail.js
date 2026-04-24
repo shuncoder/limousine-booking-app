@@ -27,7 +27,6 @@ passport.use(
           });
           await user.save();
         } else if (!user.googleId) {
-          // Update googleId nếu user tồn tại nhưng chưa có googleId
           user.googleId = profile.id;
           await user.save();
         }
