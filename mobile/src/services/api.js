@@ -84,7 +84,12 @@ export const listTrips = async (params = {}) => {
     headers: await authHeaders(),
   });
 
-  return Array.isArray(res.data?.items) ? res.data.items : [];
+  return {
+    items: Array.isArray(res.data?.items) ? res.data.items : [],
+    total: Number.isFinite(Number(res.data?.total)) ? Number(res.data.total) : 0,
+    page: Number.isFinite(Number(res.data?.page)) ? Number(res.data.page) : Number(searchParams.get('page') || 1),
+    limit: Number.isFinite(Number(res.data?.limit)) ? Number(res.data.limit) : Number(searchParams.get('limit') || 100),
+  };
 };
 
 export const holdSeat = async (tripId, seatId, holdMinutes = 5) => {

@@ -7,6 +7,8 @@ import PrimaryButton from "../components/ui/PrimaryButton";
 import TextField from "../components/ui/TextField";
 import GlassCard from '../components/ui/GlassCard';
 
+const DROPDOWN_Z_INDEX = 20;
+
 export default function BookRideScreen({ navigation }) {
   const [pickup, setPickup] = useState('');
   const [dropoff, setDropoff] = useState('');
@@ -22,9 +24,21 @@ export default function BookRideScreen({ navigation }) {
     const loadDestinations = async () => {
       setLoadingDestinations(true);
       try {
-        const trips = await listTrips();
+        const allTrips = [];
+        let page = 1;
+        let total = 0;
+        const limit = 100;
+
+        do {
+          const response = await listTrips({ page, limit });
+          const items = Array.isArray(response?.items) ? response.items : [];
+          allTrips.push(...items);
+          total = Number(response?.total) || allTrips.length;
+          page += 1;
+        } while (allTrips.length < total && page <= 50);
+
         const uniqueDestinations = [...new Set(
-          trips
+          allTrips
             .map((trip) => String(trip?.routeTo || '').trim())
             .filter(Boolean)
         )].sort((a, b) => a.localeCompare(b, 'vi'));
@@ -159,7 +173,7 @@ const styles = StyleSheet.create({
   subtitle: { color: "rgba(234,240,255,0.78)", marginTop: spacing.xs, marginBottom: spacing.lg },
   dropdownWrap: {
     marginBottom: spacing.md,
-    zIndex: 20,
+    zIndex: DROPDOWN_Z_INDEX,
   },
   dropdownLabel: {
     color: "rgba(234,240,255,0.88)",
