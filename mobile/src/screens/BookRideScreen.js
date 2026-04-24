@@ -8,7 +8,9 @@ import TextField from "../components/ui/TextField";
 import GlassCard from '../components/ui/GlassCard';
 
 const DROPDOWN_Z_INDEX = 20;
+// Default API page size used by backend trip listing.
 const TRIP_PAGE_LIMIT = 100;
+// Safety cap to prevent an endless loop if backend pagination metadata is inconsistent.
 const MAX_TRIP_PAGES = 50;
 
 export default function BookRideScreen({ navigation }) {
@@ -19,12 +21,14 @@ export default function BookRideScreen({ navigation }) {
   const [destinationOptions, setDestinationOptions] = useState([]);
   const [loadingDestinations, setLoadingDestinations] = useState(false);
   const [destinationOpen, setDestinationOpen] = useState(false);
+  const [destinationError, setDestinationError] = useState('');
 
   React.useEffect(() => {
     let mounted = true;
 
     const loadDestinations = async () => {
       setLoadingDestinations(true);
+      setDestinationError('');
       try {
         const allTrips = [];
         let page = 1;
@@ -49,7 +53,10 @@ export default function BookRideScreen({ navigation }) {
         }
       } catch (error) {
         console.error('Không tải được danh sách điểm đến:', error);
-        if (mounted) setDestinationOptions([]);
+        if (mounted) {
+          setDestinationOptions([]);
+          setDestinationError('Không tải được điểm đến, vui lòng nhập thủ công.');
+        }
       } finally {
         if (mounted) setLoadingDestinations(false);
       }
@@ -141,6 +148,7 @@ export default function BookRideScreen({ navigation }) {
                 onSubmitEditing={Keyboard.dismiss}
               />
             )}
+            {destinationError ? <Text style={styles.destinationError}>{destinationError}</Text> : null}
             <PrimaryButton
               title="Đặt chuyến"
               onPress={handleBook}
@@ -217,6 +225,11 @@ const styles = StyleSheet.create({
   },
   dropdownItemText: {
     color: colors.text,
+    fontWeight: "600",
+  },
+  destinationError: {
+    color: "#FCA5A5",
+    marginBottom: spacing.md,
     fontWeight: "600",
   },
   message: {
