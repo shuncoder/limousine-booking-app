@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import Button from "@/components/ui/button/Button";
 import { deleteBanner, listBanners, resolveAssetUrl, uploadBanner, type BannerItem } from "@/lib/api";
@@ -100,12 +99,11 @@ export default function BannersPage() {
         {items.map((item) => (
           <div key={item._id} className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
             <div className="relative h-44 w-full bg-gray-100 dark:bg-gray-900">
-              <Image
+              <img
                 src={resolveAssetUrl(item.imageUrl)}
                 alt="Banner"
-                fill
-                sizes="(max-width: 1024px) 100vw, 33vw"
-                className="object-cover"
+                className="h-full w-full object-cover"
+                loading="lazy"
               />
             </div>
             <div className="flex items-center justify-between p-3">

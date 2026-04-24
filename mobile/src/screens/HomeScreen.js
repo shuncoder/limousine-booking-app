@@ -6,8 +6,10 @@ import AppBackground from '../components/ui/AppBackground';
 import GlassCard from '../components/ui/GlassCard';
 import { getActiveBanners } from '../services/api';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 const bannerWidth = Math.max(280, width - spacing.xl * 2 - spacing.lg * 2);
+const bannerCardMinHeight = Math.max(300, Math.round(height * 0.5));
+const bannerSlideHeight = Math.max(170, bannerCardMinHeight - 160);
 
 export default function HomeScreen({ navigation }) {
   const [banners, setBanners] = React.useState([]);
@@ -32,7 +34,7 @@ export default function HomeScreen({ navigation }) {
   return (
     <AppBackground>
       <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <GlassCard style={styles.card}>
+        <GlassCard style={[styles.card, styles.bannerCard]}>
           <Text style={styles.badge}>Banner / Carousel</Text>
           <Text style={styles.bannerTitle}>Ưu đãi nổi bật</Text>
           <Text style={styles.bannerSubtitle}>Số banner hiện có: {banners.length}</Text>
@@ -84,6 +86,9 @@ const styles = StyleSheet.create({
     maxWidth: 560,
     alignSelf: "center",
   },
+  bannerCard: {
+    minHeight: bannerCardMinHeight,
+  },
   badge: {
     color: "rgba(234,240,255,0.95)",
     fontSize: 12,
@@ -102,7 +107,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   slide: {
-    height: 170,
+    height: bannerSlideHeight,
     borderRadius: 16,
     overflow: 'hidden',
     marginRight: spacing.md,

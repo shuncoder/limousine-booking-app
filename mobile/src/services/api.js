@@ -69,6 +69,24 @@ export const getTripSeats = async (tripId) => {
   return res.data;
 };
 
+export const listTrips = async (params = {}) => {
+  const searchParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      searchParams.set(key, String(value));
+    }
+  });
+  if (!searchParams.has('page')) searchParams.set('page', '1');
+  if (!searchParams.has('limit')) searchParams.set('limit', '100');
+
+  const query = searchParams.toString();
+  const res = await api.get(`/trips${query ? `?${query}` : ''}`, {
+    headers: await authHeaders(),
+  });
+
+  return Array.isArray(res.data?.items) ? res.data.items : [];
+};
+
 export const holdSeat = async (tripId, seatId, holdMinutes = 5) => {
   const res = await api.post(
     `/trips/${tripId}/hold`,
