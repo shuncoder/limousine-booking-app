@@ -7,7 +7,8 @@ import RegisterScreen from '../screens/RegisterScreen';
 import MainTabNavigator from './MainTabNavigator';
 import BookRideScreen from '../screens/BookRideScreen';
 import SeatSelectionScreen from '../screens/SeatSelectionScreen';
-import { colors } from "../theme/theme";
+import PaymentScreen from '../screens/PaymentScreen';
+import { colors } from '../theme/theme';
 
 const Stack = createStackNavigator();
 
@@ -19,7 +20,7 @@ export default function AppNavigator() {
         screenOptions={({ navigation, route }) => ({
           headerStyle: { backgroundColor: 'rgba(7, 14, 26, 0.95)' },
           headerTintColor: colors.text,
-          headerTitleStyle: { fontWeight: "800" },
+          headerTitleStyle: { fontWeight: '800' },
           headerBackTitleVisible: false,
           headerLeft: () => {
             const hide = route.name === 'Login' || route.name === 'Main';
@@ -42,8 +43,9 @@ export default function AppNavigator() {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="Main" component={MainTabNavigator} options={{ headerShown: false }} />
-        <Stack.Screen name="BookRide" component={BookRideScreen} />
-        <Stack.Screen name="SeatSelection" component={SeatSelectionScreen} options={{ title: 'Quản lý ghế' }} />
+        <Stack.Screen name="BookRide" component={BookRideScreen} options={{ title: 'Chọn chuyến' }} />
+        <Stack.Screen name="SeatSelection" component={SeatSelectionScreen} options={{ title: 'Chọn ghế' }} />
+        <Stack.Screen name="Payment" component={PaymentScreen} options={{ title: 'Thanh toán' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

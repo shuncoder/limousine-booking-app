@@ -1,7 +1,12 @@
 import { io } from 'socket.io-client';
+import { API_ORIGIN } from './axiosWithRefresh';
 
-const SOCKET_URL = 'http://192.168.1.13:5000';
+const SOCKET_OPTIONS = {
+  transports: ['websocket'],
+};
 
-const socket = io(SOCKET_URL, { transports: ['websocket'] });
+const socket = io(API_ORIGIN, SOCKET_OPTIONS);
+
+export const createTripSocket = () => io(API_ORIGIN, SOCKET_OPTIONS);
 
 export default socket;

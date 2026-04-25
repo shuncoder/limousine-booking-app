@@ -69,6 +69,13 @@ export const getTripSeats = async (tripId) => {
   return res.data;
 };
 
+export const getTripPricePreview = async (tripId) => {
+  const res = await api.get(`/trips/${tripId}/price`, {
+    headers: await authHeaders(),
+  });
+  return res.data;
+};
+
 export const listTrips = async (params = {}) => {
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {

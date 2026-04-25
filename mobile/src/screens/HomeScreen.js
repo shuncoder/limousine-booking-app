@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, Dimensions, TouchableOpacity } from 'react-native';
-import { colors, spacing } from "../theme/theme";
-import PrimaryButton from "../components/ui/PrimaryButton";
+import { colors, spacing } from '../theme/theme';
+import PrimaryButton from '../components/ui/PrimaryButton';
 import AppBackground from '../components/ui/AppBackground';
 import GlassCard from '../components/ui/GlassCard';
 import { getActiveBanners } from '../services/api';
@@ -33,7 +33,6 @@ export default function HomeScreen({ navigation }) {
     run();
   }, []);
 
-  // Xử lý khi người dùng vuốt banner
   const handleScroll = (event) => {
     const contentOffsetX = event.nativeEvent.contentOffset.x;
     const index = Math.round(contentOffsetX / bannerWidth);
@@ -41,6 +40,7 @@ export default function HomeScreen({ navigation }) {
       setCurrentBannerIndex(index);
     }
   };
+
   const scrollToBanner = (index) => {
     setCurrentBannerIndex(index);
     scrollViewRef.current?.scrollTo({
@@ -58,11 +58,11 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.loadingText}>Đang tải banner...</Text>
           ) : banners.length > 0 ? (
             <>
-              <ScrollView 
+              <ScrollView
                 ref={scrollViewRef}
-                horizontal 
-                pagingEnabled 
-                showsHorizontalScrollIndicator={false} 
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
                 style={styles.carousel}
                 onScroll={handleScroll}
                 scrollEventThrottle={16}
@@ -73,8 +73,7 @@ export default function HomeScreen({ navigation }) {
                   </View>
                 ))}
               </ScrollView>
-              
-              {/* Dấu chấm phân trang */}
+
               <View style={styles.pagination}>
                 {banners.map((_, index) => (
                   <TouchableOpacity
@@ -99,8 +98,7 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.title}>Xin chào</Text>
           <Text style={styles.subtitle}>Bạn muốn làm gì hôm nay?</Text>
           <View style={styles.actions}>
-            <PrimaryButton title="Đặt chuyến" onPress={() => navigation.navigate('BookRide')} />
-            <PrimaryButton title="Chọn ghế" onPress={() => navigation.navigate('SeatSelection')} />
+            <PrimaryButton title="Đặt vé" onPress={() => navigation.navigate('BookRide')} />
             <PrimaryButton title="Lịch sử chuyến" onPress={() => navigation.navigate('Lịch Sử Chuyến')} />
             <PrimaryButton title="Hồ sơ" onPress={() => navigation.navigate('Hồ Sơ')} />
           </View>
@@ -120,31 +118,22 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   card: {
-    width: "100%",
+    width: '100%',
     maxWidth: 560,
-    alignSelf: "center",
+    alignSelf: 'center',
   },
   bannerCard: {
     minHeight: bannerCardMinHeight,
   },
-  badge: {
-    color: "rgba(234,240,255,0.95)",
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-    marginBottom: spacing.sm,
-    textTransform: "uppercase",
-  },
-  title: { color: colors.text, fontSize: 24, fontWeight: "900" },
-  subtitle: { color: "rgba(234,240,255,0.78)", marginTop: spacing.xs, marginBottom: spacing.xl },
+  title: { color: colors.text, fontSize: 24, fontWeight: '900' },
+  subtitle: { color: 'rgba(234,240,255,0.78)', marginTop: spacing.xs, marginBottom: spacing.xl },
   actions: { gap: spacing.md },
-  bannerTitle: { 
-    color: colors.text, 
-    fontSize: 20, 
+  bannerTitle: {
+    color: colors.text,
+    fontSize: 20,
     fontWeight: '900',
-    marginBottom: spacing.xl * 2, 
+    marginBottom: spacing.xl * 2,
   },
-  bannerSubtitle: { color: 'rgba(234,240,255,0.78)', marginTop: spacing.xs, marginBottom: spacing.md },
   loadingText: { color: colors.muted, marginTop: spacing.sm, marginBottom: spacing.sm },
   carousel: {
     marginTop: 0,
