@@ -99,10 +99,6 @@ export default function PaymentScreen({ navigation, route }) {
     return `PAY|trip=${trip?._id || ''}|tickets=${ticketIds}|amount=${totalAmount}|currency=${currency}`;
   }, [currency, tickets, totalAmount, trip?._id]);
 
-  const qrUrl = useMemo(
-    () => qrValue,
-    [qrValue]
-  );
   const expectedMinutes = useMemo(() => Math.max(1, Math.ceil(leftSeconds / 60) || 15), [leftSeconds]);
 
   const handleConfirmPaid = async () => {
@@ -110,11 +106,12 @@ export default function PaymentScreen({ navigation, route }) {
     setMessage('');
 
     try {
-      for (const ticket of tickets) {
-        if (!ticket?._id) continue;
-        // eslint-disable-next-line no-await-in-loop
-        await payTicket(ticket._id);
-      }
+      await Promise.all(
+        tickets
+          .map((ticket) => ticket?._id)
+          .filter(Boolean)
+          .map((ticketId) => payTicket(ticketId))
+      );
       setPaid(true);
       setMessage('Thanh toán thành công!');
     } catch (error) {
@@ -148,7 +145,7 @@ export default function PaymentScreen({ navigation, route }) {
 
           <View style={styles.qrWrap}>
             <View style={styles.qrBox}>
-              <QRCode value={qrUrl} size={240} />
+              <QRCode value={qrValue} size={240} />
             </View>
           </View>
 

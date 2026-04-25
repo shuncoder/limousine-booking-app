@@ -202,12 +202,9 @@ export default function SeatSelectionScreen({ navigation, route }) {
     setMessage('');
 
     try {
-      const createdTickets = [];
-      for (const seatId of selectedSeatIds) {
-        // eslint-disable-next-line no-await-in-loop
-        const ticket = await createTicket(trip._id, seatId, voucherCode.trim() || undefined);
-        createdTickets.push(ticket);
-      }
+      const createdTickets = await Promise.all(
+        selectedSeatIds.map((seatId) => createTicket(trip._id, seatId, voucherCode.trim() || undefined))
+      );
 
       const total = createdTickets.reduce((sum, item) => sum + Number(item?.totalAmount || 0), 0);
       skipReleaseOnUnmountRef.current = true;
