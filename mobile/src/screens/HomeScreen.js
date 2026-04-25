@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, Dimensions, TouchableOpacity } from 'react-native';
 import { colors, spacing } from "../theme/theme";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import AppBackground from '../components/ui/AppBackground';
@@ -14,6 +14,8 @@ const bannerSlideHeight = Math.max(170, bannerCardMinHeight - 160);
 export default function HomeScreen({ navigation }) {
   const [banners, setBanners] = React.useState([]);
   const [loadingBanners, setLoadingBanners] = React.useState(false);
+  const [currentBannerIndex, setCurrentBannerIndex] = React.useState(0);
+  const scrollViewRef = React.useRef(null);
 
   React.useEffect(() => {
     const run = async () => {
@@ -31,24 +33,61 @@ export default function HomeScreen({ navigation }) {
     run();
   }, []);
 
+  // Xử lý khi người dùng vuốt banner
+  const handleScroll = (event) => {
+    const contentOffsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(contentOffsetX / bannerWidth);
+    if (index !== currentBannerIndex && index >= 0 && index < banners.length) {
+      setCurrentBannerIndex(index);
+    }
+  };
+  const scrollToBanner = (index) => {
+    setCurrentBannerIndex(index);
+    scrollViewRef.current?.scrollTo({
+      x: index * bannerWidth,
+      animated: true,
+    });
+  };
+
   return (
     <AppBackground>
       <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <GlassCard style={[styles.card, styles.bannerCard]}>
-          <Text style={styles.badge}>Banner / Carousel</Text>
-          <Text style={styles.bannerTitle}>Ưu đãi nổi bật</Text>
-          <Text style={styles.bannerSubtitle}>Số banner hiện có: {banners.length}</Text>
-
+          <Text style={styles.bannerTitle}>Thông Tin Nổi Bật</Text>
           {loadingBanners ? (
             <Text style={styles.loadingText}>Đang tải banner...</Text>
           ) : banners.length > 0 ? (
-            <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={styles.carousel}>
-              {banners.map((banner) => (
-                <View key={banner._id} style={[styles.slide, { width: bannerWidth }]}>
-                  <Image source={{ uri: banner.fullImageUrl }} style={styles.slideImage} resizeMode="cover" />
-                </View>
-              ))}
-            </ScrollView>
+            <>
+              <ScrollView 
+                ref={scrollViewRef}
+                horizontal 
+                pagingEnabled 
+                showsHorizontalScrollIndicator={false} 
+                style={styles.carousel}
+                onScroll={handleScroll}
+                scrollEventThrottle={16}
+              >
+                {banners.map((banner) => (
+                  <View key={banner._id} style={[styles.slide, { width: bannerWidth }]}>
+                    <Image source={{ uri: banner.fullImageUrl }} style={styles.slideImage} resizeMode="cover" />
+                  </View>
+                ))}
+              </ScrollView>
+              
+              {/* Dấu chấm phân trang */}
+              <View style={styles.pagination}>
+                {banners.map((_, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.dot,
+                      currentBannerIndex === index && styles.activeDot,
+                    ]}
+                    onPress={() => scrollToBanner(index)}
+                  />
+                ))}
+              </View>
+            </>
           ) : (
             <View style={styles.emptyBanner}>
               <Text style={styles.emptyBannerText}>Chưa có banner nào từ admin.</Text>
@@ -57,7 +96,6 @@ export default function HomeScreen({ navigation }) {
         </GlassCard>
 
         <GlassCard style={styles.card}>
-          <Text style={styles.badge}>Dashboard</Text>
           <Text style={styles.title}>Xin chào</Text>
           <Text style={styles.subtitle}>Bạn muốn làm gì hôm nay?</Text>
           <View style={styles.actions}>
@@ -100,11 +138,16 @@ const styles = StyleSheet.create({
   title: { color: colors.text, fontSize: 24, fontWeight: "900" },
   subtitle: { color: "rgba(234,240,255,0.78)", marginTop: spacing.xs, marginBottom: spacing.xl },
   actions: { gap: spacing.md },
-  bannerTitle: { color: colors.text, fontSize: 20, fontWeight: '900' },
+  bannerTitle: { 
+    color: colors.text, 
+    fontSize: 20, 
+    fontWeight: '900',
+    marginBottom: spacing.xl * 2, 
+  },
   bannerSubtitle: { color: 'rgba(234,240,255,0.78)', marginTop: spacing.xs, marginBottom: spacing.md },
   loadingText: { color: colors.muted, marginTop: spacing.sm, marginBottom: spacing.sm },
   carousel: {
-    marginTop: spacing.sm,
+    marginTop: 0,
   },
   slide: {
     height: bannerSlideHeight,
@@ -130,5 +173,24 @@ const styles = StyleSheet.create({
   emptyBannerText: {
     color: colors.muted,
     fontWeight: '700',
+  },
+  pagination: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    marginHorizontal: 6,
+  },
+  activeDot: {
+    backgroundColor: colors.primary || '#FFFFFF',
+    width: 20,
+    borderRadius: 4,
   },
 });
