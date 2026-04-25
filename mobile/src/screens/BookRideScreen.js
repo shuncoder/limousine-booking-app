@@ -1,68 +1,103 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Keyboard, TouchableWithoutFeedback, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Keyboard,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  ScrollView,
+} from 'react-native';
 import AppBackground from '../components/ui/AppBackground';
-import { bookRide, listTrips } from '../services/api';
-import { colors, spacing } from "../theme/theme";
-import PrimaryButton from "../components/ui/PrimaryButton";
-import TextField from "../components/ui/TextField";
+import { getTripSeats, listTrips } from '../services/api';
+import { colors, spacing } from '../theme/theme';
+import PrimaryButton from '../components/ui/PrimaryButton';
+import TextField from '../components/ui/TextField';
 import GlassCard from '../components/ui/GlassCard';
 
-const DROPDOWN_Z_INDEX = 20;
-// Default API page size used by backend trip listing.
 const TRIP_PAGE_LIMIT = 100;
-// Safety cap to prevent an endless loop if backend pagination metadata is inconsistent.
 const MAX_TRIP_PAGES = 50;
+
+function formatCurrency(value, currency = 'VND') {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: 0,
+  }).format(Number(value || 0));
+}
+
+function formatTime(dateValue) {
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return '--:--';
+  return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+}
+
+function toISODateString(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+async function getAllTrips() {
+  const allTrips = [];
+  let page = 1;
+  let total = 0;
+
+  do {
+    const response = await listTrips({ page, limit: TRIP_PAGE_LIMIT });
+    const items = Array.isArray(response?.items) ? response.items : [];
+    allTrips.push(...items);
+    total = Number(response?.total) || allTrips.length;
+    page += 1;
+  } while (allTrips.length < total && page <= MAX_TRIP_PAGES);
+
+  return allTrips;
+}
 
 export default function BookRideScreen({ navigation }) {
   const [pickup, setPickup] = useState('');
   const [dropoff, setDropoff] = useState('');
+  const [travelDate, setTravelDate] = useState(toISODateString(new Date()));
+  const [passengers, setPassengers] = useState('1');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [destinationOptions, setDestinationOptions] = useState([]);
-  const [loadingDestinations, setLoadingDestinations] = useState(false);
-  const [destinationOpen, setDestinationOpen] = useState(false);
-  const [destinationError, setDestinationError] = useState('');
+  const [allTrips, setAllTrips] = useState([]);
+  const [filteredTrips, setFilteredTrips] = useState([]);
+  const [pickupHighlights, setPickupHighlights] = useState([]);
+  const [selectedPickupHighlight, setSelectedPickupHighlight] = useState('');
+  const [sortBy, setSortBy] = useState('time');
 
-  React.useEffect(() => {
+  useEffect(() => {
     let mounted = true;
-
-    const loadDestinations = async () => {
-      setLoadingDestinations(true);
-      setDestinationError('');
+    const load = async () => {
+      setLoading(true);
+      setMessage('');
       try {
-        const allTrips = [];
-        let page = 1;
-        let total = 0;
+        const trips = await getAllTrips();
+        if (!mounted) return;
+        setAllTrips(trips);
 
-        do {
-          const response = await listTrips({ page, limit: TRIP_PAGE_LIMIT });
-          const items = Array.isArray(response?.items) ? response.items : [];
-          allTrips.push(...items);
-          total = Number(response?.total) || allTrips.length;
-          page += 1;
-        } while (allTrips.length < total && page <= MAX_TRIP_PAGES);
+        const routeFromOptions = [...new Set(
+          trips
+            .map((trip) => String(trip?.routeFrom || '').trim())
+            .filter(Boolean)
+        )].sort((a, b) => a.localeCompare(b, 'vi'));
 
-        const uniqueDestinations = [...new Set(
-          allTrips
+        const routeToOptions = [...new Set(
+          trips
             .map((trip) => String(trip?.routeTo || '').trim())
             .filter(Boolean)
         )].sort((a, b) => a.localeCompare(b, 'vi'));
 
-        if (mounted) {
-          setDestinationOptions(uniqueDestinations);
-        }
-      } catch (error) {
-        console.error('Không tải được danh sách điểm đến:', error);
-        if (mounted) {
-          setDestinationOptions([]);
-          setDestinationError('Không tải được điểm đến, vui lòng nhập thủ công.');
-        }
+        if (routeFromOptions.length) setPickup((prev) => prev || routeFromOptions[0]);
+        if (routeToOptions.length) setDropoff((prev) => prev || routeToOptions[0]);
+      } catch {
+        if (!mounted) return;
+        setMessage('Không tải được danh sách chuyến.');
       } finally {
-        if (mounted) setLoadingDestinations(false);
+        if (mounted) setLoading(false);
       }
     };
 
-    loadDestinations();
+    load();
     return () => {
       mounted = false;
     };
@@ -71,16 +106,8 @@ export default function BookRideScreen({ navigation }) {
   const handleBook = async () => {
     try {
       setLoading(true);
-      const result = await bookRide(pickup, dropoff);
-      // result có thể là ride hoặc trip, tuỳ backend
-      const tripId = result?.tripId || result?.trip?._id || result?.tripId || result?._id;
-      if (tripId) {
-        setMessage('Đặt chuyến thành công!');
-        // Chuyển sang màn hình chọn ghế, truyền tripId
-        navigation.navigate('SeatSelection', { tripId });
-      } else {
-        setMessage('Không lấy được thông tin chuyến, vui lòng thử lại.');
-      }
+      await bookRide(pickup, dropoff);
+      setMessage('Đặt chuyến thành công!');
     } catch (err) {
       setMessage('Đặt chuyến thất bại');
     } finally {
@@ -88,167 +115,268 @@ export default function BookRideScreen({ navigation }) {
     }
   };
 
-  const onSelectDestination = (value) => {
-    setDropoff(value);
-    setDestinationOpen(false);
-  };
+  const shownTrips = selectedPickupHighlight
+    ? sortedTrips.filter((trip) => String(trip.routeFrom || '').trim() === selectedPickupHighlight)
+    : sortedTrips;
 
   return (
     <AppBackground>
-      <TouchableWithoutFeedback
-        onPress={() => {
-          Keyboard.dismiss();
-          setDestinationOpen(false);
-        }}
-        accessible={false}
-      >
-        <View style={styles.screen}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
           <GlassCard style={styles.card}>
-            <Text style={styles.badge}>Quick Booking</Text>
-            <Text style={styles.title}>Đặt chuyến</Text>
-            <Text style={styles.subtitle}>Nhập điểm đón và điểm đến</Text>
+            <Text style={styles.title}>Chọn chuyến đi</Text>
+
             <TextField
-              label="Điểm đón"
-              placeholder="Ví dụ: Sân bay Tân Sơn Nhất"
+              label="Điểm đi"
+              placeholder="Ví dụ: Hà Nội"
               value={pickup}
               onChangeText={setPickup}
               returnKeyType="next"
             />
-            {destinationOptions.length > 0 ? (
-              <View style={styles.dropdownWrap}>
-                <Text style={styles.dropdownLabel}>Điểm đến</Text>
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  style={styles.dropdownTrigger}
-                  onPress={() => setDestinationOpen((prev) => !prev)}
-                >
-                  <Text style={[styles.dropdownValue, !dropoff ? styles.dropdownPlaceholder : null]}>
-                    {loadingDestinations ? 'Đang tải điểm đến...' : (dropoff || 'Chọn điểm đến')}
-                  </Text>
-                </TouchableOpacity>
-                {destinationOpen ? (
-                  <View style={styles.dropdownList}>
-                    <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
-                      {destinationOptions.map((destination) => (
-                        <TouchableOpacity
-                          key={destination}
-                          style={[
-                            styles.dropdownItem,
-                            dropoff === destination ? styles.dropdownItemActive : null,
-                          ]}
-                          activeOpacity={0.8}
-                          onPress={() => onSelectDestination(destination)}
-                        >
-                          <Text style={styles.dropdownItemText}>{destination}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  </View>
-                ) : null}
-              </View>
-            ) : (
-              <TextField
-                label="Điểm đến"
-                placeholder={loadingDestinations ? 'Đang tải điểm đến...' : 'Ví dụ: Quận 1, TP.HCM'}
-                value={dropoff}
-                onChangeText={setDropoff}
-                returnKeyType="done"
-                onSubmitEditing={Keyboard.dismiss}
-              />
-            )}
-            {destinationError ? <Text style={styles.destinationError}>{destinationError}</Text> : null}
-            <PrimaryButton
-              title="Đặt chuyến"
-              onPress={handleBook}
-              loading={loading}
-              disabled={!pickup || !dropoff}
+
+            <View style={styles.swapWrap}>
+              <TouchableOpacity style={styles.swapButton} onPress={handleSwap} activeOpacity={0.8}>
+                <Text style={styles.swapText}>↕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TextField
+              label="Điểm đến"
+              placeholder="Ví dụ: Thái Bình"
+              value={dropoff}
+              onChangeText={setDropoff}
+              returnKeyType="next"
             />
+
+            <TextField
+              label="Ngày đi (YYYY-MM-DD)"
+              placeholder="2026-04-25"
+              value={travelDate}
+              onChangeText={setTravelDate}
+              returnKeyType="next"
+            />
+
+            <TextField
+              label="Số khách"
+              placeholder="1"
+              value={passengers}
+              onChangeText={setPassengers}
+              keyboardType="number-pad"
+              returnKeyType="done"
+              onSubmitEditing={Keyboard.dismiss}
+            />
+
+            <PrimaryButton
+              title="Tìm chuyến"
+              onPress={handleSearchTrips}
+              loading={loading}
+              disabled={!pickup || !dropoff || !travelDate || !passengers}
+            />
+
+            {pickupHighlights.length > 0 ? (
+              <View style={styles.highlightsWrap}>
+                <Text style={styles.sectionTitle}>Điểm đón nổi bật</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={styles.highlightRow}>
+                    {pickupHighlights.map((point) => {
+                      const active = point === selectedPickupHighlight;
+                      return (
+                        <TouchableOpacity
+                          key={point}
+                          style={[styles.highlightChip, active ? styles.highlightChipActive : null]}
+                          onPress={() => setSelectedPickupHighlight(active ? '' : point)}
+                          activeOpacity={0.85}
+                        >
+                          <Text style={[styles.highlightText, active ? styles.highlightTextActive : null]}>{point}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </ScrollView>
+              </View>
+            ) : null}
+
+            {shownTrips.length > 0 ? (
+              <View style={styles.sortWrap}>
+                <TouchableOpacity
+                  onPress={() => setSortBy('time')}
+                  style={[styles.sortBtn, sortBy === 'time' ? styles.sortBtnActive : null]}
+                >
+                  <Text style={styles.sortBtnText}>Theo giờ</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setSortBy('price')}
+                  style={[styles.sortBtn, sortBy === 'price' ? styles.sortBtnActive : null]}
+                >
+                  <Text style={styles.sortBtnText}>Theo giá</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+
+            <View style={styles.tripListWrap}>
+              {shownTrips.map((trip) => (
+                <TouchableOpacity
+                  key={trip._id}
+                  style={styles.tripCard}
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    navigation.navigate('SeatSelection', {
+                      trip,
+                      passengers: Math.max(1, Number.parseInt(passengers, 10) || 1),
+                      travelDate,
+                      pickupPoint: selectedPickupHighlight || pickup,
+                    });
+                  }}
+                >
+                  <View style={styles.tripTopRow}>
+                    <View style={styles.tripTimeWrap}>
+                      <Text style={styles.tripTime}>{formatTime(trip.departureAt)}</Text>
+                      <Text style={styles.tripRoute}>{trip.routeFrom} → {trip.routeTo}</Text>
+                    </View>
+                    <Text style={styles.tripPrice}>{formatCurrency(trip.basePrice, trip.currency)}</Text>
+                  </View>
+                  <Text style={styles.tripSeats}>Còn {Number(trip.availableSeats || 0)} ghế</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
             {message ? <Text style={styles.message}>{message}</Text> : null}
           </GlassCard>
-        </View>
+        </ScrollView>
       </TouchableWithoutFeedback>
     </AppBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, padding: spacing.xl },
+  screen: { flex: 1 },
+  content: { padding: spacing.xl, paddingBottom: spacing.xxl },
   card: {
-    maxWidth: 560,
-    width: "100%",
-    alignSelf: "center",
-    marginTop: spacing.xl,
+    maxWidth: 600,
+    width: '100%',
+    alignSelf: 'center',
   },
-  badge: {
-    color: "rgba(234,240,255,0.95)",
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-    marginBottom: spacing.sm,
-    textTransform: "uppercase",
-  },
-  title: { color: colors.text, fontSize: 20, fontWeight: "900" },
-  subtitle: { color: "rgba(234,240,255,0.78)", marginTop: spacing.xs, marginBottom: spacing.lg },
-  dropdownWrap: {
-    marginBottom: spacing.md,
-    zIndex: DROPDOWN_Z_INDEX,
-  },
-  dropdownLabel: {
-    color: "rgba(234,240,255,0.88)",
-    marginBottom: spacing.xs,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  dropdownTrigger: {
-    minHeight: 48,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.35)",
-    backgroundColor: "rgba(255,255,255,0.14)",
-    paddingHorizontal: spacing.lg,
-    justifyContent: "center",
-  },
-  dropdownValue: {
+  title: {
     color: colors.text,
-    fontSize: 15,
+    fontSize: 24,
+    fontWeight: '900',
+    marginBottom: spacing.lg,
   },
-  dropdownPlaceholder: {
-    color: colors.muted,
+  swapWrap: {
+    alignItems: 'center',
+    marginBottom: spacing.md,
   },
-  dropdownList: {
-    marginTop: spacing.xs,
-    borderRadius: 14,
+  swapButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.3)",
-    backgroundColor: "rgba(11,18,32,0.95)",
-    maxHeight: 180,
-    overflow: "hidden",
+    borderColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(79,124,255,0.3)',
   },
-  dropdownItem: {
+  swapText: {
+    color: colors.text,
+    fontWeight: '900',
+    fontSize: 18,
+  },
+  highlightsWrap: {
+    marginTop: spacing.lg,
+  },
+  sectionTitle: {
+    color: colors.text,
+    fontWeight: '800',
+    marginBottom: spacing.sm,
+  },
+  highlightRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  highlightChip: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
-  dropdownItemActive: {
-    backgroundColor: "rgba(79,124,255,0.2)",
+  highlightChipActive: {
+    backgroundColor: colors.brand,
+    borderColor: colors.brand,
   },
-  dropdownItemText: {
+  highlightText: {
     color: colors.text,
-    fontWeight: "600",
+    fontWeight: '700',
   },
-  destinationError: {
-    color: "#FCA5A5",
-    marginBottom: spacing.md,
-    fontWeight: "600",
+  highlightTextActive: {
+    color: '#fff',
+  },
+  sortWrap: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+  },
+  sortBtn: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 999,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  sortBtnActive: {
+    backgroundColor: 'rgba(79,124,255,0.35)',
+    borderColor: colors.brand,
+  },
+  sortBtnText: {
+    color: colors.text,
+    fontWeight: '700',
+  },
+  tripListWrap: {
+    marginTop: spacing.md,
+    gap: spacing.md,
+  },
+  tripCard: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 18,
+    padding: spacing.lg,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  tripTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  tripTimeWrap: {
+    flex: 1,
+  },
+  tripTime: {
+    color: colors.text,
+    fontSize: 28,
+    fontWeight: '900',
+  },
+  tripRoute: {
+    color: colors.muted,
+    fontWeight: '700',
+    marginTop: spacing.xs,
+  },
+  tripPrice: {
+    color: colors.brand,
+    fontWeight: '900',
+    fontSize: 20,
+    textAlign: 'right',
+  },
+  tripSeats: {
+    color: colors.text,
+    textAlign: 'right',
+    marginTop: spacing.md,
+    fontWeight: '800',
   },
   message: {
-    marginTop: spacing.lg,
-    color: "rgba(234,240,255,0.92)",
-    fontWeight: "700",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.35)",
-    borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    marginTop: spacing.md,
+    color: '#FECACA',
+    fontWeight: '700',
   },
 });

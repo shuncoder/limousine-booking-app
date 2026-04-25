@@ -1,46 +1,34 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { colors, spacing, radius } from "../theme/theme";
 
-/**
- * seat.status:
- * - available
- * - held
- * - booked
- * - paid
- * seat.heldByMe: boolean
- */
-
-function getSeatState(seat, selectedSeatId, seatId) {
+function getSeatVisual(seat) {
   const status = seat?.status || "available";
-  const heldByMe = !!seat?.heldByMe;
-
-  if (seatId === selectedSeatId) {
-    return { type: "selected", disabled: false };
-  }
+  const heldByMe = Boolean(seat?.heldByMe);
 
   if (status === "available") {
-    return { type: "available", disabled: false };
+    return { bg: colors.surface2, border: colors.border, text: colors.text, disabled: false };
   }
 
   if (status === "held") {
-    return heldByMe
-      ? { type: "heldByMe", disabled: false }
-      : { type: "disabled", disabled: true };
+    if (heldByMe) {
+      return { bg: colors.brand2, border: colors.brand2, text: colors.bg, disabled: false };
+    }
+    return { bg: colors.surface, border: colors.border, text: colors.muted, disabled: true };
   }
 
-  if (status === "booked" || status === "paid") {
-    return { type: "disabled", disabled: true };
+  if (status === "pending") {
+    return { bg: colors.surface, border: colors.border, text: colors.muted, disabled: true };
   }
 
-  return { type: "disabled", disabled: true };
+  if (status === "paid") {
+    return { bg: colors.surface, border: colors.brand2, text: colors.muted, disabled: true };
+  }
+
+  return { bg: colors.surface, border: colors.border, text: colors.muted, disabled: true };
 }
 
-export default function SeatMap({
-  seatLayout,
-  seats = {},
-  selectedSeatId,
-  onPressSeat,
-}) {
+export default function SeatMap({ seatLayout, seats, selectedSeatId, onPressSeat }) {
   const rows = seatLayout?.rows || [];
 
   return (
@@ -54,8 +42,9 @@ export default function SeatMap({
             }
 
             const seatId = String(cell);
-            const seat = seats[seatId] || {};
-            const state = getSeatState(seat, selectedSeatId, seatId);
+            const seat = seats?.[seatId] || { status: "available" };
+            const visual = getSeatVisual(seat);
+            const isSelected = selectedSeatId === seatId;
 
             return (
               <TouchableOpacity
@@ -65,7 +54,8 @@ export default function SeatMap({
                 activeOpacity={0.7}
                 style={[
                   styles.seat,
-                  styles[state.type],
+                  { backgroundColor: visual.bg, borderColor: visual.border },
+                  isSelected ? styles.selected : null,
                 ]}
               >
                 <Text style={styles.text}>{seatId}</Text>
@@ -77,19 +67,18 @@ export default function SeatMap({
 
       {/* Legend */}
       <View style={styles.legend}>
-        <LegendItem label="Trống" style={styles.available} />
-        <LegendItem label="Đã chọn" style={styles.selected} />
-        <LegendItem label="Giữ (của bạn)" style={styles.heldByMe} />
-        <LegendItem label="Đã đặt" style={styles.disabled} />
+        <LegendItem label="Trống" bg={colors.surface2} />
+        <LegendItem label="Giữ (của bạn)" bg={colors.brand2} />
+        <LegendItem label="Đã giữ/đặt" bg={colors.surface} />
       </View>
     </View>
   );
 }
 
-function LegendItem({ label, style }) {
+function LegendItem({ label, bg }) {
   return (
     <View style={styles.legendItem}>
-      <View style={[styles.legendBox, style]} />
+      <View style={[styles.legendSwatch, { backgroundColor: bg }]} />
       <Text style={styles.legendText}>{label}</Text>
     </View>
   );
@@ -102,7 +91,9 @@ const styles = StyleSheet.create({
 
   row: {
     flexDirection: "row",
-    gap: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
   },
 
   aisle: {
@@ -110,49 +101,30 @@ const styles = StyleSheet.create({
   },
 
   seat: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
+    width: 42,
+    height: 42,
+    borderRadius: radius.md,
     borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
-
-  text: {
-    fontWeight: "700",
-    fontSize: 12,
-  },
-  available: {
-    backgroundColor: "#ffffff",
-    borderColor: "#d1d5db",
-  },
-
   selected: {
-    backgroundColor: "#f97316",
-    borderColor: "#f97316",
+    borderColor: colors.brand,
+    borderWidth: 2,
   },
-
-  heldByMe: {
-    backgroundColor: "#22c55e",
-    borderColor: "#22c55e",
-  },
-
-  disabled: {
-    backgroundColor: "#9ca3af",
-    borderColor: "#9ca3af",
+  seatText: {
+    fontWeight: "900",
   },
   legend: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 12,
-    marginTop: 10,
+    justifyContent: "space-between",
+    gap: spacing.md,
   },
 
   legendItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: spacing.sm,
   },
 
   legendBox: {
@@ -163,6 +135,8 @@ const styles = StyleSheet.create({
   },
 
   legendText: {
+    color: colors.muted,
+    fontWeight: "700",
     fontSize: 12,
     fontWeight: "600",
     color: "#374151",

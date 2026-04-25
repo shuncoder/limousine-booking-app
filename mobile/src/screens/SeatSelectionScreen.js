@@ -34,7 +34,6 @@ export default function SeatSelectionScreen({ route }) {
 
   const handlePressSeat = (seatId, seat) => {
     setSelectedSeatId(seatId);
-    // TODO: Gọi API giữ ghế hoặc chuyển sang bước tiếp theo
   };
 
   if (loading) {
