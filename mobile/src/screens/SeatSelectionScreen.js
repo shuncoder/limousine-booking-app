@@ -1,117 +1,82 @@
+
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
+import { getTripSeats } from '../services/api';
+import { colors } from '../theme/theme';
+import SeatMap from '../components/SeatMap';
 
-export default function SeatMap({
-  seatLayout,
-  seats = {},
-  selectedSeatId,
-  onPressSeat,
-}) {
-  const rows = seatLayout?.rows || [];
+export default function SeatSelectionScreen({ route }) {
+  const { tripId } = route.params || {};
+  const [loading, setLoading] = React.useState(true);
+  const [seatLayout, setSeatLayout] = React.useState(null);
+  const [seats, setSeats] = React.useState({});
+  const [error, setError] = React.useState("");
+  const [selectedSeatId, setSelectedSeatId] = React.useState(null);
 
-  const getSeatStyle = (seatId) => {
-    const seat = seats[seatId];
-    if (!seatId) return styles.empty;
-
-    if (seat?.status === "booked") {
-      return [styles.seat, styles.booked];
+  React.useEffect(() => {
+    if (!tripId) {
+      setError("Không tìm thấy chuyến xe.");
+      setLoading(false);
+      return;
     }
+    setLoading(true);
+    getTripSeats(tripId)
+      .then((data) => {
+        setSeatLayout(data.layout || data.seatLayout || {});
+        setSeats(data.seats || {});
+        setError("");
+      })
+      .catch(() => {
+        setError("Không tải được thông tin ghế.");
+      })
+      .finally(() => setLoading(false));
+  }, [tripId]);
 
-    if (seat?.status === "held" && !seat?.heldByMe) {
-      return [styles.seat, styles.held];
-    }
-
-    if (seatId === selectedSeatId) {
-      return [styles.seat, styles.selected];
-    }
-
-    return [styles.seat, styles.available];
+  const handlePressSeat = (seatId, seat) => {
+    setSelectedSeatId(seatId);
+    // TODO: Gọi API giữ ghế hoặc chuyển sang bước tiếp theo
   };
 
-  const isDisabled = (seatId) => {
-    const seat = seats[seatId];
-    return (
-      !seatId ||
-      seat?.status === "booked" ||
-      (seat?.status === "held" && !seat?.heldByMe)
-    );
-  };
+  if (loading) {
+    return <View style={styles.center}><ActivityIndicator size="large" color={colors.primary || '#fff'} /><Text style={{color: colors.text, marginTop: 12}}>Đang tải sơ đồ ghế...</Text></View>;
+  }
+  if (error) {
+    return <View style={styles.center}><Text style={{color: '#F00'}}>{error}</Text></View>;
+  }
+  if (!seatLayout || !seatLayout.rows) {
+    return <View style={styles.center}><Text>Không có dữ liệu sơ đồ ghế.</Text></View>;
+  }
 
   return (
-    <View style={styles.container}>
-      {rows.map((row, rowIndex) => (
-        <View key={rowIndex} style={styles.row}>
-          {row.map((seatId, colIndex) => {
-            if (seatId === null) {
-              return <View key={colIndex} style={styles.aisle} />;
-            }
-
-            return (
-              <TouchableOpacity
-                key={seatId}
-                style={getSeatStyle(seatId)}
-                disabled={isDisabled(seatId)}
-                onPress={() => onPressSeat(seatId, seats[seatId])}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.text}>{seatId}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      ))}
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 16 }}>
+      <Text style={{ color: colors.text, fontWeight: 'bold', fontSize: 18, marginBottom: 16 }}>Chọn ghế</Text>
+      <SeatMap
+        seatLayout={seatLayout}
+        seats={seats}
+        selectedSeatId={selectedSeatId}
+        onPressSeat={handlePressSeat}
+      />
+      <View style={{ flexDirection: 'row', marginTop: 24, gap: 16 }}>
+        <View style={[styles.legendBox, { backgroundColor: '#fff', borderColor: '#ccc' }]} />
+        <Text style={{ color: colors.text }}>Ghế trống</Text>
+        <View style={[styles.legendBox, { backgroundColor: '#111827' }]} />
+        <Text style={{ color: colors.text }}>Ghế đã đặt</Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    alignItems: "center",
-    gap: 10,
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-
-  row: {
-    flexDirection: "row",
-    gap: 8,
-  },
-
-  seat: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  aisle: {
-    width: 20, // lối đi
-  },
-
-  empty: {
-    width: 36,
-    height: 36,
-  },
-
-  text: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 12,
-  },
-
-  // trạng thái
-  available: {
-    backgroundColor: "#334155",
-  },
-
-  selected: {
-    backgroundColor: "#f97316",
-  },
-
-  booked: {
-    backgroundColor: "#111827",
-  },
-
-  held: {
-    backgroundColor: "#6b7280",
+  legendBox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 1,
+    marginRight: 6,
   },
 });

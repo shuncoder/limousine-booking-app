@@ -71,8 +71,16 @@ export default function BookRideScreen({ navigation }) {
   const handleBook = async () => {
     try {
       setLoading(true);
-      await bookRide(pickup, dropoff);
-      setMessage('Đặt chuyến thành công!');
+      const result = await bookRide(pickup, dropoff);
+      // result có thể là ride hoặc trip, tuỳ backend
+      const tripId = result?.tripId || result?.trip?._id || result?.tripId || result?._id;
+      if (tripId) {
+        setMessage('Đặt chuyến thành công!');
+        // Chuyển sang màn hình chọn ghế, truyền tripId
+        navigation.navigate('SeatSelection', { tripId });
+      } else {
+        setMessage('Không lấy được thông tin chuyến, vui lòng thử lại.');
+      }
     } catch (err) {
       setMessage('Đặt chuyến thất bại');
     } finally {

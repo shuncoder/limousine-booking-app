@@ -1,140 +1,170 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { colors, spacing, radius } from "../theme/theme";
 
-function getSeatVisual(seat) {
+/**
+ * seat.status:
+ * - available
+ * - held
+ * - booked
+ * - paid
+ * seat.heldByMe: boolean
+ */
+
+function getSeatState(seat, selectedSeatId, seatId) {
   const status = seat?.status || "available";
-  const heldByMe = Boolean(seat?.heldByMe);
+  const heldByMe = !!seat?.heldByMe;
+
+  if (seatId === selectedSeatId) {
+    return { type: "selected", disabled: false };
+  }
 
   if (status === "available") {
-    return { bg: colors.surface2, border: colors.border, text: colors.text, disabled: false };
+    return { type: "available", disabled: false };
   }
 
   if (status === "held") {
-    if (heldByMe) {
-      return { bg: colors.brand2, border: colors.brand2, text: colors.bg, disabled: false };
-    }
-    return { bg: colors.surface, border: colors.border, text: colors.muted, disabled: true };
+    return heldByMe
+      ? { type: "heldByMe", disabled: false }
+      : { type: "disabled", disabled: true };
   }
 
-  if (status === "pending") {
-    return { bg: colors.surface, border: colors.border, text: colors.muted, disabled: true };
+  if (status === "booked" || status === "paid") {
+    return { type: "disabled", disabled: true };
   }
 
-  if (status === "paid") {
-    return { bg: colors.surface, border: colors.brand2, text: colors.muted, disabled: true };
-  }
-
-  return { bg: colors.surface, border: colors.border, text: colors.muted, disabled: true };
+  return { type: "disabled", disabled: true };
 }
 
-export default function SeatMap({ seatLayout, seats, selectedSeatId, onPressSeat }) {
+export default function SeatMap({
+  seatLayout,
+  seats = {},
+  selectedSeatId,
+  onPressSeat,
+}) {
   const rows = seatLayout?.rows || [];
 
   return (
-    <View style={styles.map}>
-      {rows.map((row, rIdx) => (
-        <View key={`row-${rIdx}`} style={styles.row}>
-          {row.map((cell, cIdx) => {
-            if (!cell) {
-              return <View key={`aisle-${rIdx}-${cIdx}`} style={styles.aisle} />;
+    <View style={styles.container}>
+      {rows.map((row, rowIndex) => (
+        <View key={`row-${rowIndex}`} style={styles.row}>
+          {row.map((cell, colIndex) => {
+           
+            if (cell === null) {
+              return <View key={`aisle-${colIndex}`} style={styles.aisle} />;
             }
 
             const seatId = String(cell);
-            const seat = seats?.[seatId] || { status: "available" };
-            const visual = getSeatVisual(seat);
-            const isSelected = selectedSeatId === seatId;
+            const seat = seats[seatId] || {};
+            const state = getSeatState(seat, selectedSeatId, seatId);
 
             return (
               <TouchableOpacity
-                key={`seat-${seatId}`}
-                disabled={visual.disabled}
+                key={seatId}
+                disabled={state.disabled}
                 onPress={() => onPressSeat?.(seatId, seat)}
+                activeOpacity={0.7}
                 style={[
                   styles.seat,
-                  { backgroundColor: visual.bg, borderColor: visual.border },
-                  isSelected ? styles.selected : null,
+                  styles[state.type],
                 ]}
               >
-                <Text style={[styles.seatText, { color: visual.text }]}>{seatId}</Text>
+                <Text style={styles.text}>{seatId}</Text>
               </TouchableOpacity>
             );
           })}
         </View>
       ))}
 
+      {/* Legend */}
       <View style={styles.legend}>
-        <LegendItem label="Trống" bg={colors.surface2} />
-        <LegendItem label="Giữ (của bạn)" bg={colors.brand2} />
-        <LegendItem label="Đã giữ/đặt" bg={colors.surface} />
+        <LegendItem label="Trống" style={styles.available} />
+        <LegendItem label="Đã chọn" style={styles.selected} />
+        <LegendItem label="Giữ (của bạn)" style={styles.heldByMe} />
+        <LegendItem label="Đã đặt" style={styles.disabled} />
       </View>
     </View>
   );
 }
 
-function LegendItem({ label, bg }) {
+function LegendItem({ label, style }) {
   return (
     <View style={styles.legendItem}>
-      <View style={[styles.legendSwatch, { backgroundColor: bg }]} />
+      <View style={[styles.legendBox, style]} />
       <Text style={styles.legendText}>{label}</Text>
     </View>
   );
 }
-
 const styles = StyleSheet.create({
-  map: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    gap: spacing.md,
+  container: {
+    alignItems: "center",
+    gap: 12,
   },
+
   row: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
+    gap: 8,
   },
+
   aisle: {
     width: 20,
-    height: 42,
   },
+
   seat: {
-    width: 42,
-    height: 42,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    alignItems: "center",
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
   },
+
+  text: {
+    fontWeight: "700",
+    fontSize: 12,
+  },
+  available: {
+    backgroundColor: "#ffffff",
+    borderColor: "#d1d5db",
+  },
+
   selected: {
-    borderColor: colors.brand,
-    borderWidth: 2,
+    backgroundColor: "#f97316",
+    borderColor: "#f97316",
   },
-  seatText: {
-    fontWeight: "900",
+
+  heldByMe: {
+    backgroundColor: "#22c55e",
+    borderColor: "#22c55e",
+  },
+
+  disabled: {
+    backgroundColor: "#9ca3af",
+    borderColor: "#9ca3af",
   },
   legend: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    gap: spacing.md,
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 12,
+    marginTop: 10,
   },
+
   legendItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
+    gap: 6,
   },
-  legendSwatch: {
+
+  legendBox: {
     width: 14,
     height: 14,
-    borderRadius: radius.pill,
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: colors.border,
   },
+
   legendText: {
-    color: colors.muted,
-    fontWeight: "700",
     fontSize: 12,
+    fontWeight: "600",
+    color: "#374151",
   },
 });
