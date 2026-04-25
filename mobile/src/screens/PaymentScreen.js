@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import AppBackground from '../components/ui/AppBackground';
 import GlassCard from '../components/ui/GlassCard';
 import PrimaryButton from '../components/ui/PrimaryButton';
 import { colors, spacing } from '../theme/theme';
 import { payTicket } from '../services/api';
 import { createTripSocket } from '../services/socket';
+import QRCode from 'react-native-qrcode-svg';
 
 function formatCurrency(value, currency = 'VND') {
   return new Intl.NumberFormat('vi-VN', {
@@ -99,9 +100,10 @@ export default function PaymentScreen({ navigation, route }) {
   }, [currency, tickets, totalAmount, trip?._id]);
 
   const qrUrl = useMemo(
-    () => `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(qrValue)}`,
+    () => qrValue,
     [qrValue]
   );
+  const expectedMinutes = useMemo(() => Math.max(1, Math.ceil(leftSeconds / 60) || 15), [leftSeconds]);
 
   const handleConfirmPaid = async () => {
     setPaying(true);
@@ -127,7 +129,7 @@ export default function PaymentScreen({ navigation, route }) {
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
         <GlassCard style={styles.card}>
           <Text style={styles.title}>Thanh toán</Text>
-          <Text style={styles.step}>Bước 3/3 • Hoàn tất trong 15 phút</Text>
+          <Text style={styles.step}>Bước 3/3 • Hoàn tất trong khoảng {expectedMinutes} phút</Text>
 
           <View style={styles.detailBox}>
             <Text style={styles.detailText}>Tuyến: {trip?.routeFrom} → {trip?.routeTo}</Text>
@@ -145,7 +147,9 @@ export default function PaymentScreen({ navigation, route }) {
           </Text>
 
           <View style={styles.qrWrap}>
-            <Image source={{ uri: qrUrl }} style={styles.qr} resizeMode="contain" />
+            <View style={styles.qrBox}>
+              <QRCode value={qrUrl} size={240} />
+            </View>
           </View>
 
           <PrimaryButton
@@ -191,12 +195,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: spacing.md,
   },
-  qr: {
+  qrBox: {
     width: 260,
     height: 260,
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   message: { color: '#FECACA', fontWeight: '700', textAlign: 'center' },
 });

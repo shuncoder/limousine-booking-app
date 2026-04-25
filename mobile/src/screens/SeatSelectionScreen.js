@@ -20,6 +20,8 @@ import {
 } from '../services/api';
 import { createTripSocket } from '../services/socket';
 
+const SEAT_HOLD_DURATION_MINUTES = 5;
+
 function formatCurrency(value, currency = 'VND') {
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
@@ -111,7 +113,10 @@ export default function SeatSelectionScreen({ navigation, route }) {
     return () => {
       if (skipReleaseOnUnmountRef.current) return;
       selectedSeatIdsRef.current.forEach((seatId) => {
-        releaseSeat(trip._id, seatId).catch(() => undefined);
+        releaseSeat(trip._id, seatId).catch((error) => {
+          // eslint-disable-next-line no-console
+          console.warn('Release seat failed on unmount:', error?.response?.data?.msg || error?.message || error);
+        });
       });
     };
   }, [trip?._id]);
@@ -155,7 +160,7 @@ export default function SeatSelectionScreen({ navigation, route }) {
     }
 
     try {
-      const hold = await holdSeat(trip._id, seatId, 5);
+      const hold = await holdSeat(trip._id, seatId, SEAT_HOLD_DURATION_MINUTES);
       setSelectedSeatIds((prev) => [...prev, seatId]);
       setSeats((prev) => ({
         ...prev,
