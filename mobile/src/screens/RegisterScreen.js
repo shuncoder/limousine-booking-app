@@ -4,7 +4,8 @@ import { completeProfile } from '../services/api';
 import { colors, spacing } from "../theme/theme";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import TextField from "../components/ui/TextField";
-import { setTokens } from "../services/tokenStorage";
+import { setTokens, setUserSession } from "../services/tokenStorage";
+import { connectSocket } from "../services/socket";
 import AppBackground from '../components/ui/AppBackground';
 import GlassCard from '../components/ui/GlassCard';
 
@@ -18,9 +19,16 @@ export default function RegisterScreen({ navigation, route }) {
   const handleRegister = async () => {
     try {
       setLoading(true);
-      const res = await completeProfile(onboardingToken, name, phone);
+      const res = await completeProfile(name, phone);
       await setTokens(res.token);
-      navigation.replace('Main');
+      const role = res.user?.role || 'user';
+      await setUserSession({ role, id: res.user?.id });
+      try {
+        await connectSocket();
+      } catch {
+        // ignore
+      }
+      navigation.replace(role === 'driver' ? 'DriverMain' : 'Main');
     } catch (err) {
       setError('Đăng ký thất bại');
     } finally {

@@ -1,5 +1,4 @@
 const User = require('../models/User');
-const AdminProfile = require('../models/AdminProfile');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { hasMailerConfig, sendOtpEmail } = require('../config/mailer');
@@ -72,23 +71,14 @@ exports.getCurrentUser = async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ msg: 'User not found' });
 
-    let adminProfile = null;
-    if (['admin', 'staff'].includes(String(user.role || ''))) {
-      adminProfile = await AdminProfile.findOne({ userId: user.id });
-    }
-
     res.json({
       id: user.id,
       username: user.username || null,
       email: user.email,
       role: user.role,
-      name: adminProfile?.fullName || user.name || '',
-      adminProfile: adminProfile
-        ? {
-            id: adminProfile.id,
-            fullName: adminProfile.fullName,
-          }
-        : null,
+      name: user.name || '',
+      phone: user.phone || null,
+      avatar: user.avatar || null,
     });
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });
@@ -116,8 +106,6 @@ exports.adminLogin = async (req, res) => {
       return res.status(401).json({ msg: 'Invalid credentials' });
     }
 
-    const adminProfile = await AdminProfile.findOne({ userId: user.id });
-
     const payload = { user: { id: user.id, role: user.role } };
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
     res.json({
@@ -125,7 +113,7 @@ exports.adminLogin = async (req, res) => {
       user: {
         id: user.id,
         username: user.username || normalizedUsername,
-        name: adminProfile?.fullName || user.name || '',
+        name: user.name || '',
         email: user.email,
         role: user.role,
         avatar: user.avatar ?? null,
@@ -294,18 +282,15 @@ exports.updateAdminProfile = async (req, res) => {
       return res.status(403).json({ msg: 'Forbidden' });
     }
 
-    const profile = await AdminProfile.findOneAndUpdate(
-      { userId: user.id },
-      { $set: { fullName: cleanName } },
-      { new: true, upsert: true }
-    );
+    user.name = cleanName;
+    await user.save();
 
     await createAdminLog({
       adminUserId: user.id,
       action: 'update',
-      entityType: 'admin_profile',
-      entityId: profile.id,
-      details: `Updated full name to ${cleanName}`,
+      entityType: 'user',
+      entityId: user.id,
+      details: `Updated admin name to ${cleanName}`,
     });
 
     res.json({
@@ -313,7 +298,7 @@ exports.updateAdminProfile = async (req, res) => {
       user: {
         id: user.id,
         username: user.username || null,
-        name: profile.fullName,
+        name: user.name,
         email: user.email,
         role: user.role,
       },

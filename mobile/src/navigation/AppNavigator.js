@@ -5,12 +5,17 @@ import { createStackNavigator } from '@react-navigation/stack';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import MainTabNavigator from './MainTabNavigator';
+import DriverTabNavigator from './DriverTabNavigator';
 import BookRideScreen from '../screens/BookRideScreen';
 import SeatSelectionScreen from '../screens/SeatSelectionScreen';
+import CustomerInfoScreen from '../screens/CustomerInfoScreen';
 import PaymentScreen from '../screens/PaymentScreen';
+import RouteVisualizationScreen from '../screens/RouteVisualizationScreen';
 import { colors } from '../theme/theme';
 
 const Stack = createStackNavigator();
+
+const ROOT_ROUTES = new Set(['Login', 'Main', 'DriverMain']);
 
 export default function AppNavigator() {
   return (
@@ -23,8 +28,7 @@ export default function AppNavigator() {
           headerTitleStyle: { fontWeight: '800' },
           headerBackTitleVisible: false,
           headerLeft: () => {
-            const hide = route.name === 'Login' || route.name === 'Main';
-            if (hide) return null;
+            if (ROOT_ROUTES.has(route.name)) return null;
             return (
               <Pressable
                 onPress={() => {
@@ -43,9 +47,20 @@ export default function AppNavigator() {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="Main" component={MainTabNavigator} options={{ headerShown: false }} />
+        <Stack.Screen
+          name="DriverMain"
+          component={DriverTabNavigator}
+          options={{ headerShown: false }}
+        />
         <Stack.Screen name="BookRide" component={BookRideScreen} options={{ title: 'Chọn chuyến' }} />
         <Stack.Screen name="SeatSelection" component={SeatSelectionScreen} options={{ title: 'Chọn ghế' }} />
+        <Stack.Screen name="CustomerInfo" component={CustomerInfoScreen} options={{ title: 'Thông tin khách hàng' }} />
         <Stack.Screen name="Payment" component={PaymentScreen} options={{ title: 'Thanh toán' }} />
+        <Stack.Screen
+          name="RouteVisualization"
+          component={RouteVisualizationScreen}
+          options={{ title: 'Định tuyến A*' }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

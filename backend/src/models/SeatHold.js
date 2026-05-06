@@ -12,5 +12,7 @@ const seatHoldSchema = new mongoose.Schema(
 
 seatHoldSchema.index({ tripId: 1, seatId: 1 }, { unique: true });
 seatHoldSchema.index({ tripId: 1, userId: 1 });
+seatHoldSchema.index({ tripId: 1, seatId: 1, expiresAt: 1 });
+seatHoldSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0, name: 'SeatHoldExpiry' });
 
 module.exports = mongoose.model('SeatHold', seatHoldSchema);

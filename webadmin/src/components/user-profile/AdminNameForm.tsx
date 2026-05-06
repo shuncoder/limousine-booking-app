@@ -74,11 +74,11 @@ export default function AdminNameForm() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
-          <Label>Username (bảng User)</Label>
+          <Label>Username</Label>
           <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="username" disabled />
         </div>
         <div>
-          <Label>Họ và tên (bảng AdminProfile)</Label>
+          <Label>Họ và tên</Label>
           <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Nhập họ và tên" />
         </div>
       </div>

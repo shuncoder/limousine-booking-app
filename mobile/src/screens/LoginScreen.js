@@ -4,7 +4,8 @@ import { startEmailOtp, verifyEmailOtp } from '../services/api';
 import { colors, spacing } from "../theme/theme";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import TextField from "../components/ui/TextField";
-import { setTokens } from "../services/tokenStorage";
+import { setTokens, setUserSession } from "../services/tokenStorage";
+import { connectSocket } from "../services/socket";
 import AppBackground from '../components/ui/AppBackground';
 import GlassCard from '../components/ui/GlassCard';
 
@@ -43,7 +44,14 @@ export default function LoginScreen({ navigation }) {
         navigation.navigate("Register", { onboardingToken: res.token, email });
       } else {
         await setTokens(res.token);
-        navigation.replace("Main");
+        const role = res.user?.role || 'user';
+        await setUserSession({ role, id: res.user?.id });
+        try {
+          await connectSocket();
+        } catch {
+          // ignore
+        }
+        navigation.replace(role === 'driver' ? 'DriverMain' : 'Main');
       }
     } catch (err) {
       console.log("ERROR VERIFY:", err.response?.data || err.message);

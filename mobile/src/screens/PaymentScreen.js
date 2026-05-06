@@ -7,33 +7,12 @@ import { colors, spacing } from '../theme/theme';
 import { payTicket } from '../services/api';
 import { createTripSocket } from '../services/socket';
 import QRCode from 'react-native-qrcode-svg';
-
-function formatCurrency(value, currency = 'VND') {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 0,
-  }).format(Number(value || 0));
-}
-
-function formatDateTime(value) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '--';
-  return date.toLocaleString('vi-VN');
-}
-
-function secondsLeft(expireAt) {
-  if (!expireAt) return 0;
-  const now = Date.now();
-  const target = new Date(expireAt).getTime();
-  return Math.max(0, Math.floor((target - now) / 1000));
-}
-
-function formatCountdown(totalSeconds) {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-}
+import {
+  formatCurrency,
+  formatDateTime,
+  formatPointLabel,
+} from '../utils/bookingFormatters';
+import usePaymentCountdown from '../hooks/usePaymentCountdown';
 
 export default function PaymentScreen({ navigation, route }) {
   const trip = route?.params?.trip;
@@ -43,18 +22,22 @@ export default function PaymentScreen({ navigation, route }) {
     ? route.params.selectedSeatIds
     : tickets.map((item) => String(item?.seatId || '')).filter(Boolean);
 
-  const pickupPoint = route?.params?.pickupPoint || trip?.routeFrom;
+  const pickupPoint = route?.params?.pickupPoint;
+  const dropoffPoint = route?.params?.dropoffPoint;
   const travelDate = route?.params?.travelDate || '';
-  const totalAmount = Number(route?.params?.totalAmount || 0);
-  const currency = tickets[0]?.currency || trip?.currency || 'VND';
+  const summary = route?.params?.summary || null;
+  const totalAmount = Number(
+    summary?.totalAmount ?? route?.params?.totalAmount ?? 0
+  );
+  const currency = summary?.currency || tickets[0]?.currency || trip?.currency || 'VND';
 
-  const [leftSeconds, setLeftSeconds] = useState(() => {
-    const minExpireAt = tickets
-      .map((item) => item?.expiresAt)
-      .filter(Boolean)
-      .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0];
-    return secondsLeft(minExpireAt);
-  });
+  const expiresAtList = useMemo(
+    () => tickets.map((t) => t?.expiresAt).filter(Boolean),
+    [tickets]
+  );
+  const { leftSeconds, formatted: countdown, expired, setLeftSeconds } =
+    usePaymentCountdown(expiresAtList);
+
   const [message, setMessage] = useState('');
   const [paying, setPaying] = useState(false);
   const [paid, setPaid] = useState(false);
@@ -62,60 +45,79 @@ export default function PaymentScreen({ navigation, route }) {
   const socketRef = useRef(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setLeftSeconds((prev) => Math.max(0, prev - 1));
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
     if (!trip?._id) return undefined;
+    let cancelled = false;
 
-    const socket = createTripSocket();
-    socketRef.current = socket;
-
-    socket.emit('join_trip', { tripId: trip._id });
-    socket.on('seat_update', (payload) => {
-      if (String(payload?.tripId) !== String(trip._id)) return;
-      if (!selectedSeatIds.includes(String(payload?.seatId || ''))) return;
-
-      if (payload?.status === 'available' && !paid) {
-        setMessage('Đã hết thời gian giữ ghế hoặc ghế đã được giải phóng.');
-        setLeftSeconds(0);
+    (async () => {
+      const socket = await createTripSocket();
+      if (cancelled) {
+        socket.disconnect();
+        return;
       }
-    });
+
+      socketRef.current = socket;
+      socket.emit('join_trip', { tripId: trip._id });
+      socket.on('seat_update', (payload) => {
+        if (String(payload?.tripId) !== String(trip._id)) return;
+        if (!selectedSeatIds.includes(String(payload?.seatId || ''))) return;
+
+        if (payload?.status === 'available' && !paid) {
+          setMessage('Đã hết thời gian giữ ghế hoặc ghế đã được giải phóng.');
+          setLeftSeconds(0);
+        }
+      });
+    })();
 
     return () => {
+      cancelled = true;
       if (socketRef.current) {
         socketRef.current.emit('leave_trip', { tripId: trip._id });
         socketRef.current.disconnect();
+        socketRef.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paid, selectedSeatIds, trip?._id]);
 
   const qrValue = useMemo(() => {
-    const ticketIds = tickets.map((item) => item?._id).filter(Boolean).join(',');
+    const ticketIds = tickets
+      .map((item) => item?._id)
+      .filter(Boolean)
+      .join(',');
     return `PAY|trip=${trip?._id || ''}|tickets=${ticketIds}|amount=${totalAmount}|currency=${currency}`;
   }, [currency, tickets, totalAmount, trip?._id]);
 
-  const expectedMinutes = useMemo(() => Math.max(1, Math.ceil(leftSeconds / 60) || 15), [leftSeconds]);
+  const expectedMinutes = useMemo(
+    () => Math.max(1, Math.ceil(leftSeconds / 60) || 15),
+    [leftSeconds]
+  );
 
   const handleConfirmPaid = async () => {
     setPaying(true);
     setMessage('');
 
     try {
-      await Promise.all(
-        tickets
-          .map((ticket) => ticket?._id)
-          .filter(Boolean)
-          .map((ticketId) => payTicket(ticketId))
+      const ticketIds = tickets.map((t) => t?._id).filter(Boolean);
+      const responses = await Promise.all(
+        ticketIds.map((ticketId) => payTicket(ticketId))
       );
+
       setPaid(true);
       setMessage('Thanh toán thành công!');
+
+      const firstWithRoute = responses.find((r) => r?.routePlan);
+      const firstTicketId = ticketIds[0];
+
+      setTimeout(() => {
+        navigation.replace('RouteVisualization', {
+          routePlan: firstWithRoute?.routePlan || null,
+          ticketId: firstTicketId,
+        });
+      }, 600);
     } catch (error) {
-      setMessage(error?.response?.data?.msg || 'Thanh toán thất bại hoặc vé đã hết hạn.');
+      setMessage(
+        error?.response?.data?.msg || 'Thanh toán thất bại hoặc vé đã hết hạn.'
+      );
     } finally {
       setPaying(false);
     }
@@ -126,21 +128,45 @@ export default function PaymentScreen({ navigation, route }) {
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
         <GlassCard style={styles.card}>
           <Text style={styles.title}>Thanh toán</Text>
-          <Text style={styles.step}>Bước 3/3 • Hoàn tất trong khoảng {expectedMinutes} phút</Text>
+          <Text style={styles.step}>
+            Bước 3/3 • Hoàn tất trong khoảng {expectedMinutes} phút
+          </Text>
 
           <View style={styles.detailBox}>
-            <Text style={styles.detailText}>Tuyến: {trip?.routeFrom} → {trip?.routeTo}</Text>
+            <Text style={styles.detailText}>
+              Tuyến: {trip?.routeFrom} → {trip?.routeTo}
+            </Text>
             <Text style={styles.detailText}>Ngày đi: {travelDate}</Text>
-            <Text style={styles.detailText}>Giờ khởi hành: {formatDateTime(trip?.departureAt)}</Text>
-            <Text style={styles.detailText}>Nơi đón: {pickupPoint}</Text>
-            <Text style={styles.detailText}>Nơi trả: {trip?.routeTo}</Text>
+            <Text style={styles.detailText}>
+              Giờ khởi hành: {formatDateTime(trip?.departureAt)}
+            </Text>
+            <Text style={styles.detailText}>
+              Nơi đón: {formatPointLabel(pickupPoint, trip?.routeFrom)}
+            </Text>
+            <Text style={styles.detailText}>
+              Nơi trả: {formatPointLabel(dropoffPoint, trip?.routeTo)}
+            </Text>
             <Text style={styles.detailText}>Số khách: {passengers}</Text>
-            <Text style={styles.detailText}>Ghế: {selectedSeatIds.join(', ')}</Text>
-            <Text style={styles.total}>Tổng tiền: {formatCurrency(totalAmount, currency)}</Text>
+            <Text style={styles.detailText}>
+              Ghế: {selectedSeatIds.join(', ')}
+            </Text>
+            {summary?.discountAmount > 0 ? (
+              <Text style={styles.detailText}>
+                Giảm giá: -{formatCurrency(summary.discountAmount, currency)}
+                {summary.promoCode ? ` (${summary.promoCode})` : ''}
+              </Text>
+            ) : null}
+            <Text style={styles.total}>
+              Tổng tiền: {formatCurrency(totalAmount, currency)}
+            </Text>
           </View>
 
-          <Text style={[styles.countdown, leftSeconds === 0 ? styles.countdownExpired : null]}>
-            {leftSeconds > 0 ? `Thời gian còn lại: ${formatCountdown(leftSeconds)}` : 'Hết thời gian thanh toán'}
+          <Text
+            style={[styles.countdown, expired ? styles.countdownExpired : null]}
+          >
+            {expired
+              ? 'Hết thời gian thanh toán'
+              : `Thời gian còn lại: ${countdown}`}
           </Text>
 
           <View style={styles.qrWrap}>
@@ -153,7 +179,7 @@ export default function PaymentScreen({ navigation, route }) {
             title={paid ? 'Đã thanh toán' : 'Tôi đã thanh toán'}
             onPress={handleConfirmPaid}
             loading={paying}
-            disabled={paid || leftSeconds === 0 || paying}
+            disabled={paid || expired || paying}
           />
 
           <PrimaryButton

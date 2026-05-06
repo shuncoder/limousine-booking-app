@@ -1,12 +1,38 @@
 const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
 
 let io;
 
+function userRoom(userId) {
+  return `user:${String(userId)}`;
+}
+
 function initSocket(server) {
-  io = new Server(server, { cors: { origin: '*' } });
+  io = new Server(server, {
+    cors: { origin: '*' },
+  });
+  io.use((socket, next) => {
+    try {
+      const token = socket.handshake.auth?.token;
+      if (!token) return next(new Error('Unauthorized'));
+
+      const secret = process.env.JWT_SECRET || 'dev-jwt-secret';
+      const decoded = jwt.verify(token, secret);
+
+      socket.user = decoded.user;
+      next();
+    } catch (err) {
+      next(new Error('Invalid token'));
+    }
+  });
 
   io.on('connection', (socket) => {
-    console.log('Socket connected:', socket.id);
+    const userId = socket.user?.id;
+    console.log('Socket connected:', socket.id, userId);
+
+    if (userId) {
+      socket.join(userRoom(userId));
+    }
 
     socket.on('join_trip', ({ tripId }) => {
       if (!tripId) return;
@@ -18,19 +44,6 @@ function initSocket(server) {
       socket.leave(`trip:${tripId}`);
     });
 
-    socket.on('ride_request', (data) => {
-      io.emit('ride_request', data);
-    });
-    socket.on('ride_accept', (data) => {
-      io.emit('ride_accept', data);
-    });
-    socket.on('driver_location', (data) => {
-      io.emit('driver_location', data);
-    });
-    socket.on('ride_complete', (data) => {
-      io.emit('ride_complete', data);
-    });
-
     socket.on('disconnect', () => {
       console.log('Socket disconnected:', socket.id);
     });
@@ -40,7 +53,35 @@ function initSocket(server) {
 }
 
 function getIO() {
-  return io;
+  return io || null;
 }
 
-module.exports = { initSocket, getIO };
+function emitSeatUpdate(tripId, payload) {
+  if (!io) return;
+  io.to(`trip:${tripId}`).emit('seat_update', payload);
+}
+
+function emitSeatHold(tripId, payload) {
+  if (!io) return;
+  io.to(`trip:${tripId}`).emit('seat_hold', payload);
+}
+
+function emitSeatRelease(tripId, payload) {
+  if (!io) return;
+  io.to(`trip:${tripId}`).emit('seat_release', payload);
+}
+
+function emitNotification(userId, notification) {
+  if (!io || !userId) return;
+  io.to(userRoom(userId)).emit('notification:new', notification);
+}
+
+module.exports = {
+  initSocket,
+  getIO,
+  emitSeatUpdate,
+  emitSeatHold,
+  emitSeatRelease,
+  emitNotification,
+  userRoom,
+};

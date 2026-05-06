@@ -64,36 +64,83 @@ export function resolveAssetUrl(path: string) {
   return `${API_ORIGIN}/${path}`;
 }
 
+export type PickupPoint = {
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  areaId: string;
+};
+
+export type PickupArea = {
+  areaId: string;
+  name: string;
+  featured?: boolean;
+  points: PickupPoint[];
+};
+
+export type SeatLayoutMeta = {
+  rowCount?: number;
+  leftCount?: number;
+  rightCount?: number;
+};
+
+export type SeatLayout = {
+  rows?: (string | null)[][];
+  meta?: SeatLayoutMeta;
+};
+
+export type DynamicPricingTier = {
+  minFillRate: number;
+  multiplier: number;
+};
+
+export type DynamicPricing = {
+  enabled?: boolean;
+  tiers?: DynamicPricingTier[];
+};
+
 export type Trip = {
   _id: string;
   routeFrom: string;
   routeTo: string;
   departureAt: string;
   vehicleName?: string | null;
+  driverId?: string | null;
   totalSeats?: number;
   basePrice: number;
   currency: string;
-  dynamicPricing?: { enabled?: boolean };
+  dynamicPricing?: DynamicPricing;
   status?: string;
+  pickupAreas?: PickupArea[];
+  dropoffAreas?: PickupArea[];
+  seatLayout?: SeatLayout;
+};
+
+export type CreateTripInput = {
+  routeFrom: string;
+  routeTo: string;
+  departureAt: string;
+  basePrice: number;
+  currency?: string;
+  vehicleName?: string | null;
+  driverId?: string | null;
+  seatLayoutConfig?: SeatLayoutMeta;
+  dynamicPricing?: DynamicPricing;
+  pickupAreas?: PickupArea[];
+  dropoffAreas?: PickupArea[];
 };
 
 export async function listTrips(token: string) {
   return apiFetch<{ items: Trip[] }>(`/trips?page=1&limit=100`, { token });
 }
 
-export async function createTrip(
-  token: string,
-  input: {
-    routeFrom: string;
-    routeTo: string;
-    departureAt: string;
-    basePrice: number;
-    currency?: string;
-    vehicleName?: string;
-    seatLayoutConfig?: { rowCount?: number; leftCount?: number; rightCount?: number };
-  }
-) {
+export async function createTrip(token: string, input: CreateTripInput) {
   return apiFetch<Trip>(`/trips`, { token, method: "POST", body: input });
+}
+
+export async function updateTrip(token: string, tripId: string, patch: Partial<CreateTripInput>) {
+  return apiFetch<Trip>(`/trips/${tripId}`, { token, method: "PATCH", body: patch });
 }
 
 export async function deleteTrip(token: string, tripId: string) {
@@ -203,6 +250,47 @@ export async function listUsers(token: string) {
 
 export async function updateUserRole(token: string, userId: string, role: string) {
   return apiFetch<User>(`/admin/users/${userId}/role`, { token, method: "PATCH", body: { role } });
+}
+
+export type Driver = User;
+
+export async function listDrivers(token: string, q?: string) {
+  const search = q ? `&q=${encodeURIComponent(q)}` : "";
+  return apiFetch<{ items: Driver[]; total: number }>(
+    `/admin/drivers?page=1&limit=200${search}`,
+    { token }
+  );
+}
+
+export async function listUsersFiltered(
+  token: string,
+  { role, q }: { role?: string; q?: string } = {}
+) {
+  const params = new URLSearchParams();
+  params.set("page", "1");
+  params.set("limit", "200");
+  if (role) params.set("role", role);
+  if (q) params.set("q", q);
+  return apiFetch<{ items: User[]; total: number }>(
+    `/admin/users?${params.toString()}`,
+    { token }
+  );
+}
+
+export async function promoteUserToDriver(token: string, userId: string) {
+  return apiFetch<User>(`/admin/drivers/${userId}/promote`, {
+    token,
+    method: "POST",
+    body: {},
+  });
+}
+
+export async function demoteDriver(token: string, userId: string) {
+  return apiFetch<User>(`/admin/drivers/${userId}/demote`, {
+    token,
+    method: "POST",
+    body: {},
+  });
 }
 
 export type AdminNotification = {

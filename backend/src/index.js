@@ -8,6 +8,7 @@ const passport = require('passport');
 const connectDB = require('./config/database');
 const { initSocket } = require('./sockets/socket');
 const { startSeatJobs } = require('./jobs/seatJobs');
+const { startSeatHoldWatcher } = require('./jobs/seatHoldWatcher');
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   require('./config/gmail'); // Initialize Passport with Google OAuth
 }
@@ -15,7 +16,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 const app = express();
 const server = http.createServer(app);
 
-// Connect to DB
+// Connect to DB 
 connectDB();
 
 // Middleware
@@ -48,11 +49,14 @@ app.use('/api/promos', require('./routes/promos'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/complaints', require('./routes/complaints'));
 app.use('/api/banners', require('./routes/banners'));
+app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/routing', require('./routes/routing'));
 
 // Socket.IO
 initSocket(server);
 
 // Background jobs: expire seat holds & pending tickets
+startSeatHoldWatcher();
 startSeatJobs();
 
 const PORT = process.env.PORT || 5000;

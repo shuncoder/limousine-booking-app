@@ -6,6 +6,24 @@ const ticketSchema = new mongoose.Schema(
     seatId: { type: String, required: true },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
 
+    pickupAreaId: { type: String, required: true, trim: true },
+    pickupPoint: {
+      name: { type: String, required: true, trim: true },
+      address: { type: String, required: true, trim: true },
+      lat: { type: Number, required: true },
+      lng: { type: Number, required: true },
+      areaId: { type: String, required: true, trim: true },
+    },
+
+    dropoffAreaId: { type: String, required: true, trim: true },
+    dropoffPoint: {
+      name: { type: String, required: true, trim: true },
+      address: { type: String, required: true, trim: true },
+      lat: { type: Number, required: true },
+      lng: { type: Number, required: true },
+      areaId: { type: String, required: true, trim: true },
+    },
+
     status: {
       type: String,
       enum: ['pending', 'paid', 'cancelled', 'expired'],
@@ -37,9 +55,6 @@ const ticketSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
-// Prevent double-booking for active tickets (pending/paid)
-// Note: partial index requires MongoDB support (works on Atlas/local Mongo).
 ticketSchema.index(
   { tripId: 1, seatId: 1 },
   { unique: true, partialFilterExpression: { status: { $in: ['pending', 'paid'] } } }

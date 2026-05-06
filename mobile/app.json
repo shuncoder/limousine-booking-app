@@ -12,9 +12,7 @@
     "ios": {
       "supportsTablet": true
     },
-    "android": {
-      
-    },
-    "hostUri": "192.168.106.6:8081"
+    "android": { 
+    }
   }
 }

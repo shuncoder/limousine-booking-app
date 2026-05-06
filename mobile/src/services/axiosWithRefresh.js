@@ -3,8 +3,6 @@ import { getAccessToken, getRefreshToken, setTokens, clearTokens } from './token
 
 export const API_URL = 'http://192.168.106.6:5000/api';
 export const API_ORIGIN = API_URL.replace(/\/api$/, '');
-//'http://192.168.106.6:5000/api' nhà
-//'http://192.168.1.13:5000/api'
 
 const api = axios.create({
   baseURL: API_URL,

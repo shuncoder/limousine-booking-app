@@ -14,16 +14,116 @@ exports.listUsers = async (req, res) => {
     const limit = Math.min(100, Math.max(1, toInt(req.query.limit, 20)));
     const skip = (page - 1) * limit;
 
+    const filter = {};
+    if (req.query.role) {
+      filter.role = String(req.query.role);
+    }
+    if (req.query.q) {
+      const q = String(req.query.q).trim();
+      if (q) {
+        const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+        filter.$or = [{ name: re }, { email: re }, { phone: re }];
+      }
+    }
+
     const [items, total] = await Promise.all([
-      User.find({})
+      User.find(filter)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .select('-googleId'),
-      User.countDocuments({}),
+      User.countDocuments(filter),
     ]);
 
     res.json({ items, page, limit, total });
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+exports.listDrivers = async (req, res) => {
+  try {
+    const page = Math.max(1, toInt(req.query.page, 1));
+    const limit = Math.min(100, Math.max(1, toInt(req.query.limit, 50)));
+    const skip = (page - 1) * limit;
+
+    const filter = { role: 'driver' };
+    if (req.query.q) {
+      const q = String(req.query.q).trim();
+      if (q) {
+        const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+        filter.$or = [{ name: re }, { email: re }, { phone: re }];
+      }
+    }
+
+    const [items, total] = await Promise.all([
+      User.find(filter)
+        .sort({ name: 1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .select('-googleId -otpHash -otpExpiresAt -passwordHash'),
+      User.countDocuments(filter),
+    ]);
+
+    res.json({ items, page, limit, total });
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+exports.promoteUserToDriver = async (req, res) => {
+  try {
+    const before = await User.findById(req.params.id).select('-googleId');
+    if (!before) return res.status(404).json({ msg: 'User not found' });
+    if (['admin'].includes(before.role)) {
+      return res.status(400).json({ msg: 'Không thể đổi vai trò admin' });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { role: 'driver' },
+      { new: true }
+    ).select('-googleId');
+
+    await createAdminLog({
+      adminUserId: req.user.id,
+      action: 'update',
+      entityType: 'driver',
+      entityId: user.id,
+      details: `Promoted ${user.email} to driver`,
+      metadata: { fromRole: before.role, toRole: 'driver' },
+    });
+
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+exports.demoteDriver = async (req, res) => {
+  try {
+    const before = await User.findById(req.params.id).select('-googleId');
+    if (!before) return res.status(404).json({ msg: 'User not found' });
+    if (before.role !== 'driver') {
+      return res.status(400).json({ msg: 'Người dùng này không phải driver' });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { role: 'user' },
+      { new: true }
+    ).select('-googleId');
+
+    await createAdminLog({
+      adminUserId: req.user.id,
+      action: 'update',
+      entityType: 'driver',
+      entityId: user.id,
+      details: `Demoted driver ${user.email} back to user`,
+      metadata: { fromRole: 'driver', toRole: 'user' },
+    });
+
+    res.json(user);
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });
   }

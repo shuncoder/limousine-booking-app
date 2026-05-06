@@ -99,7 +99,6 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.subtitle}>Bạn muốn làm gì hôm nay?</Text>
           <View style={styles.actions}>
             <PrimaryButton title="Đặt chuyến" onPress={() => navigation.navigate('BookRide')} />
-            <PrimaryButton title="Chọn ghế" onPress={() => navigation.navigate('SeatSelection')} />
             <PrimaryButton title="Lịch sử chuyến" onPress={() => navigation.navigate('Lịch Sử Chuyến')} />
             <PrimaryButton title="Thông báo" onPress={() => navigation.navigate('Thông Báo')} />
           </View>

@@ -8,12 +8,19 @@ const {
   listRides,
   updateRide,
   listAdminNotifications,
+  listDrivers,
+  promoteUserToDriver,
+  demoteDriver,
 } = require('../controllers/adminController');
 
 router.use(auth, requireRole('admin', 'staff'));
 
 router.get('/users', listUsers);
 router.patch('/users/:id/role', updateUserRole);
+
+router.get('/drivers', listDrivers);
+router.post('/drivers/:id/promote', promoteUserToDriver);
+router.post('/drivers/:id/demote', demoteDriver);
 
 router.get('/rides', listRides);
 router.patch('/rides/:id', updateRide);

@@ -2,12 +2,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const ACCESS_TOKEN_KEY = "auth_access_token";
 const REFRESH_TOKEN_KEY = "auth_refresh_token";
+const USER_ROLE_KEY = "auth_user_role";
+const USER_ID_KEY = "auth_user_id";
 
-// Lưu cả access token và refresh token
 export async function setTokens(tokens) {
-  // Backward compatible:
-  // - setTokens({ accessToken, refreshToken })
-  // - setTokens("<jwt>")
   if (typeof tokens === "string") {
     const token = tokens.trim();
     if (token) await AsyncStorage.setItem(ACCESS_TOKEN_KEY, token);
@@ -27,7 +25,24 @@ export async function getRefreshToken() {
   return await AsyncStorage.getItem(REFRESH_TOKEN_KEY);
 }
 
-export async function clearTokens() {
-  await AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY]);
+export async function setUserSession({ role, id } = {}) {
+  if (role) await AsyncStorage.setItem(USER_ROLE_KEY, String(role));
+  if (id) await AsyncStorage.setItem(USER_ID_KEY, String(id));
 }
 
+export async function getUserRole() {
+  return await AsyncStorage.getItem(USER_ROLE_KEY);
+}
+
+export async function getUserId() {
+  return await AsyncStorage.getItem(USER_ID_KEY);
+}
+
+export async function clearTokens() {
+  await AsyncStorage.multiRemove([
+    ACCESS_TOKEN_KEY,
+    REFRESH_TOKEN_KEY,
+    USER_ROLE_KEY,
+    USER_ID_KEY,
+  ]);
+}

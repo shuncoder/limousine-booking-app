@@ -9,7 +9,7 @@ function buildSeatLayout({ rowCount = 10, leftCount = 2, rightCount = 2 } = {}) 
 
     for (let i = 0; i < leftCount; i += 1) row.push(String(seatNumber++));
 
-    row.push(null); // aisle
+    row.push(null);
 
     for (let i = 0; i < rightCount; i += 1) row.push(String(seatNumber++));
 
@@ -37,6 +37,27 @@ const dynamicPricingTierSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const pickupPointSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    address: { type: String, required: true, trim: true },
+    lat: { type: Number, required: true },
+    lng: { type: Number, required: true },
+    areaId: { type: String, required: true, trim: true },
+  },
+  { _id: false }
+);
+
+const pickupAreaSchema = new mongoose.Schema(
+  {
+    areaId: { type: String, required: true, trim: true },
+    name: { type: String, required: true, trim: true },
+    featured: { type: Boolean, default: false },
+    points: { type: [pickupPointSchema], default: [] },
+  },
+  { _id: false }
+);
+
 const tripSchema = new mongoose.Schema(
   {
     routeFrom: { type: String, required: true, trim: true },
@@ -44,6 +65,12 @@ const tripSchema = new mongoose.Schema(
     departureAt: { type: Date, required: true },
 
     vehicleName: { type: String, default: null, trim: true },
+    driverId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+      index: true,
+    },
 
     seatLayout: { type: Object, required: true },
     seatIds: { type: [String], default: [] },
@@ -56,6 +83,9 @@ const tripSchema = new mongoose.Schema(
       enabled: { type: Boolean, default: false },
       tiers: { type: [dynamicPricingTierSchema], default: [] },
     },
+
+    pickupAreas: { type: [pickupAreaSchema], default: [] },
+    dropoffAreas: { type: [pickupAreaSchema], default: [] },
 
     status: {
       type: String,

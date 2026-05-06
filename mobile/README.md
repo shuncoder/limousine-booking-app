@@ -8,18 +8,7 @@
 - **Axios**: Gọi API tới backend.
 - **Socket.IO Client**: Kết nối realtime với backend.
 
-## Thư mục chính
+## Cấu Trúc
 
-- `src/screens/`: Các màn hình (Login, Register, Home, BookRide, RideHistory, Profile).
-- `src/components/`: Các component dùng chung.
-- `src/services/`: Gọi API, kết nối socket.
-- `src/navigation/`: Điều hướng app.
-- `src/utils/`: Tiện ích dùng chung.
 
-## Chạy frontend
 
-```bash
-cd mobile
-npm install
-npm start
-```

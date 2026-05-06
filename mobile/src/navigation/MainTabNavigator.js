@@ -6,10 +6,13 @@ import RideHistoryScreen from '../screens/RideHistoryScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import NotificationScreen from '../screens/NotificationScreen';
 import { Ionicons } from '@expo/vector-icons';
+import { useUnreadNotificationsCount } from '../hooks/useNotifications';
 
 const Tab = createBottomTabNavigator();
 
 export default function MainTabNavigator() {
+  const { count } = useUnreadNotificationsCount();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -37,7 +40,14 @@ export default function MainTabNavigator() {
     >
       <Tab.Screen name="Trang Chủ" component={HomeScreen} />
       <Tab.Screen name="Lịch Sử Chuyến" component={RideHistoryScreen} />
-      <Tab.Screen name="Thông Báo" component={NotificationScreen} />
+      <Tab.Screen
+        name="Thông Báo"
+        component={NotificationScreen}
+        options={{
+          tabBarBadge: count > 0 ? (count > 99 ? '99+' : count) : undefined,
+          tabBarBadgeStyle: { backgroundColor: '#EF4444', color: '#fff' },
+        }}
+      />
       <Tab.Screen name="Hồ Sơ" component={ProfileScreen} />
     </Tab.Navigator>
   );

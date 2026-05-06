@@ -28,8 +28,15 @@ function getSeatVisual(seat) {
   return { bg: colors.surface, border: colors.border, text: colors.muted, disabled: true };
 }
 
-export default function SeatMap({ seatLayout, seats, selectedSeatId, onPressSeat }) {
+export default function SeatMap({ seatLayout, seats, selectedSeatIds, selectedSeatId, onPressSeat }) {
   const rows = seatLayout?.rows || [];
+  const selectedSet = new Set(
+    Array.isArray(selectedSeatIds)
+      ? selectedSeatIds.map(String)
+      : selectedSeatId
+        ? [String(selectedSeatId)]
+        : []
+  );
 
   return (
     <View style={styles.container}>
@@ -44,12 +51,12 @@ export default function SeatMap({ seatLayout, seats, selectedSeatId, onPressSeat
             const seatId = String(cell);
             const seat = seats?.[seatId] || { status: "available" };
             const visual = getSeatVisual(seat);
-            const isSelected = selectedSeatId === seatId;
+            const isSelected = selectedSet.has(seatId);
 
             return (
               <TouchableOpacity
                 key={seatId}
-                disabled={state.disabled}
+                disabled={visual.disabled}
                 onPress={() => onPressSeat?.(seatId, seat)}
                 activeOpacity={0.7}
                 style={[
@@ -58,7 +65,7 @@ export default function SeatMap({ seatLayout, seats, selectedSeatId, onPressSeat
                   isSelected ? styles.selected : null,
                 ]}
               >
-                <Text style={styles.text}>{seatId}</Text>
+                <Text style={styles.seatText}>{seatId}</Text>
               </TouchableOpacity>
             );
           })}
@@ -135,10 +142,8 @@ const styles = StyleSheet.create({
   },
 
   legendText: {
-    color: colors.muted,
-    fontWeight: "700",
+    color: "#374151",
     fontSize: 12,
     fontWeight: "600",
-    color: "#374151",
   },
 });

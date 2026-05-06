@@ -36,6 +36,11 @@ const navItems: NavItem[] = [
     path: "/users",
   },
   {
+    icon: <UserCircleIcon />,
+    name: "Tài xế",
+    path: "/drivers",
+  },
+  {
     icon: <BoxCubeIcon />,
     name: "Vé",
     path: "/tickets",
