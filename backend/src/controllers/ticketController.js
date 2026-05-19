@@ -3,7 +3,7 @@ const Ticket = require('../models/Ticket');
 const SeatHold = require('../models/SeatHold');
 const User = require('../models/User');
 const { computePrice, computeDiscount } = require('../utils/pricing');
-const { getIO } = require('../sockets/socket');
+const { getIO, emitTripSeatCount } = require('../sockets/socket');
 const { createAdminLog } = require('../utils/adminAudit');
 const { createNotification } = require('../utils/notify');
 const { buildRoutePlan } = require('../utils/routeSimulator');
@@ -331,6 +331,8 @@ async function performBooking({ trip, body, userId, holdRequired = true }) {
     });
   }
 
+  emitTripSeatCount(trip._id).catch(() => undefined);
+
   // Customer notification (single combined notification for the batch)
   const seatLabel = ctx.seatIds.join(', ');
   await createNotification({
@@ -553,6 +555,8 @@ exports.cancelTicket = async (req, res) => {
       tripId: String(ticket.tripId),
       seatId: ticket.seatId,
     });
+
+    emitTripSeatCount(ticket.tripId).catch(() => undefined);
 
     const trip = await Trip.findById(ticket.tripId).select(
       'routeFrom routeTo driverId'

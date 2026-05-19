@@ -1,57 +1,41 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Dimensions, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  Dimensions,
+  TouchableOpacity,
+} from 'react-native';
 import { colors, spacing } from '../theme/theme';
 import PrimaryButton from '../components/ui/PrimaryButton';
 import AppBackground from '../components/ui/AppBackground';
 import GlassCard from '../components/ui/GlassCard';
-import { getActiveBanners } from '../services/api';
+import useBanners from '../hooks/useBanners';
 
 const { width, height } = Dimensions.get('window');
-const bannerWidth = Math.max(280, width - spacing.xl * 2 - spacing.lg * 2);
-const bannerCardMinHeight = Math.max(300, Math.round(height * 0.5));
-const bannerSlideHeight = Math.max(170, bannerCardMinHeight - 160);
+const BANNER_WIDTH = Math.max(280, width - spacing.xl * 2 - spacing.lg * 2);
+const BANNER_CARD_MIN_HEIGHT = Math.max(300, Math.round(height * 0.5));
+const BANNER_SLIDE_HEIGHT = Math.max(170, BANNER_CARD_MIN_HEIGHT - 160);
 
 export default function HomeScreen({ navigation }) {
-  const [banners, setBanners] = React.useState([]);
-  const [loadingBanners, setLoadingBanners] = React.useState(false);
-  const [currentBannerIndex, setCurrentBannerIndex] = React.useState(0);
-  const scrollViewRef = React.useRef(null);
-
-  React.useEffect(() => {
-    const run = async () => {
-      setLoadingBanners(true);
-      try {
-        const items = await getActiveBanners();
-        setBanners(items || []);
-      } catch {
-        setBanners([]);
-      } finally {
-        setLoadingBanners(false);
-      }
-    };
-
-    run();
-  }, []);
-
-  const handleScroll = (event) => {
-    const contentOffsetX = event.nativeEvent.contentOffset.x;
-    const index = Math.round(contentOffsetX / bannerWidth);
-    if (index !== currentBannerIndex && index >= 0 && index < banners.length) {
-      setCurrentBannerIndex(index);
-    }
-  };
-
-  const scrollToBanner = (index) => {
-    setCurrentBannerIndex(index);
-    scrollViewRef.current?.scrollTo({
-      x: index * bannerWidth,
-      animated: true,
-    });
-  };
+  const {
+    banners,
+    loading: loadingBanners,
+    currentIndex,
+    scrollRef,
+    handleScroll,
+    scrollToIndex,
+  } = useBanners({ bannerWidth: BANNER_WIDTH });
 
   return (
     <AppBackground>
-      <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <GlassCard style={[styles.card, styles.bannerCard]}>
           <Text style={styles.bannerTitle}>Thông Tin Nổi Bật</Text>
           {loadingBanners ? (
@@ -59,7 +43,7 @@ export default function HomeScreen({ navigation }) {
           ) : banners.length > 0 ? (
             <>
               <ScrollView
-                ref={scrollViewRef}
+                ref={scrollRef}
                 horizontal
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}
@@ -68,8 +52,15 @@ export default function HomeScreen({ navigation }) {
                 scrollEventThrottle={16}
               >
                 {banners.map((banner) => (
-                  <View key={banner._id} style={[styles.slide, { width: bannerWidth }]}>
-                    <Image source={{ uri: banner.fullImageUrl }} style={styles.slideImage} resizeMode="cover" />
+                  <View
+                    key={banner._id}
+                    style={[styles.slide, { width: BANNER_WIDTH }]}
+                  >
+                    <Image
+                      source={{ uri: banner.fullImageUrl }}
+                      style={styles.slideImage}
+                      resizeMode="cover"
+                    />
                   </View>
                 ))}
               </ScrollView>
@@ -80,9 +71,9 @@ export default function HomeScreen({ navigation }) {
                     key={index}
                     style={[
                       styles.dot,
-                      currentBannerIndex === index && styles.activeDot,
+                      currentIndex === index && styles.activeDot,
                     ]}
-                    onPress={() => scrollToBanner(index)}
+                    onPress={() => scrollToIndex(index)}
                   />
                 ))}
               </View>
@@ -123,7 +114,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   bannerCard: {
-    minHeight: bannerCardMinHeight,
+    minHeight: BANNER_CARD_MIN_HEIGHT,
   },
   title: { color: colors.text, fontSize: 24, fontWeight: '900' },
   subtitle: { color: 'rgba(234,240,255,0.78)', marginTop: spacing.xs, marginBottom: spacing.xl },
@@ -139,7 +130,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   slide: {
-    height: bannerSlideHeight,
+    height: BANNER_SLIDE_HEIGHT,
     borderRadius: 16,
     overflow: 'hidden',
     marginRight: spacing.md,

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -8,80 +8,23 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { listMyDriverTrips, getNotificationUnreadCount } from '../../services/api';
 import { colors, spacing } from '../../theme/theme';
 import AppBackground from '../../components/ui/AppBackground';
 import GlassCard from '../../components/ui/GlassCard';
-
-function formatDateTime(value) {
-  if (!value) return '--';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '--';
-  return date.toLocaleString('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function isToday(value) {
-  if (!value) return false;
-  const date = new Date(value);
-  const now = new Date();
-  return (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate()
-  );
-}
+import useDriverDashboard from '../../hooks/useDriverDashboard';
+import { formatDayTimeShort } from '../../utils/bookingFormatters';
 
 export default function DriverHomeScreen({ navigation }) {
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [trips, setTrips] = useState([]);
-  const [unread, setUnread] = useState(0);
-
-  const fetchData = useCallback(async (silent = false) => {
-    try {
-      if (!silent) setLoading(true);
-      const [tripsRes, unreadRes] = await Promise.all([
-        listMyDriverTrips({ upcoming: true, limit: 10 }),
-        getNotificationUnreadCount().catch(() => 0),
-      ]);
-      setTrips(tripsRes.items);
-      setUnread(unreadRes);
-    } catch {
-      // ignore
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchData(true);
-    }, [fetchData])
-  );
-
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await fetchData(true);
-    setRefreshing(false);
-  }, [fetchData]);
-
-  const todayTrips = trips.filter((t) => isToday(t.departureAt));
-  const totalBookedToday = todayTrips.reduce(
-    (sum, t) => sum + (Number(t.bookedSeats) || 0),
-    0
-  );
-  const nextTrip = trips[0];
+  const {
+    todayTrips,
+    totalBookedToday,
+    nextTrip,
+    unread,
+    loading,
+    refreshing,
+    refresh,
+  } = useDriverDashboard();
 
   return (
     <AppBackground>
@@ -91,7 +34,7 @@ export default function DriverHomeScreen({ navigation }) {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={handleRefresh}
+            onRefresh={refresh}
             tintColor={colors.text}
           />
         }
@@ -150,7 +93,7 @@ export default function DriverHomeScreen({ navigation }) {
                   {nextTrip.routeFrom} → {nextTrip.routeTo}
                 </Text>
                 <Text style={styles.subtle}>
-                  {formatDateTime(nextTrip.departureAt)} • Xe{' '}
+                  {formatDayTimeShort(nextTrip.departureAt)} • Xe{' '}
                   {nextTrip.vehicleName || '--'}
                 </Text>
                 <Text style={[styles.subtle, { color: colors.brand2 }]}>

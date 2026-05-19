@@ -1,9 +1,5 @@
 const { haversineMeters } = require('./osmGraph');
 
-/**
- * Min-heap over generic items keyed by their numeric `f` score.
- * Pure JS, no third-party dep.
- */
 class MinHeap {
   constructor() {
     this.data = [];

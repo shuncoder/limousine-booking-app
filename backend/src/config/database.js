@@ -10,7 +10,6 @@ const connectDB = async () => {
     try {
       await mongoose.connection.collection('users').dropIndex('phone_1');
     } catch (e) {
-      // ignore if index doesn't exist
     }
   } catch (err) {
     console.error(err.message);

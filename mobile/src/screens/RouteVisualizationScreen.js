@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -7,140 +7,40 @@ import {
   ActivityIndicator,
   Dimensions,
 } from 'react-native';
-import Svg, { Polyline, Circle, Rect } from 'react-native-svg';
+import Svg, { Polyline, Circle, Rect, Line, Text as SvgText } from 'react-native-svg';
 import AppBackground from '../components/ui/AppBackground';
 import GlassCard from '../components/ui/GlassCard';
 import PrimaryButton from '../components/ui/PrimaryButton';
 import { colors, spacing } from '../theme/theme';
-import { getTicketRoutePlan } from '../services/api';
-import useOsmRoute from '../hooks/useOsmRoute';
+import useTicketRoutePlan from '../hooks/useTicketRoutePlan';
+import { formatLatLng, formatMeters } from '../utils/mapProjection';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-function formatLatLng(value) {
-  if (!Number.isFinite(Number(value))) return '--';
-  return Number(value).toFixed(5);
-}
-
-function formatMeters(value) {
-  if (!Number.isFinite(Number(value))) return '--';
-  const m = Number(value);
-  if (m >= 1000) return `${(m / 1000).toFixed(2)} km`;
-  return `${Math.round(m)} m`;
-}
-
-/**
- * Equirectangular (plate-carrée) projection scaled to the bounding box of
- * the polyline. Good enough for academic visualization at city scale.
- */
-function projectPath(points, width, height, padding = 12) {
-  if (!points.length) return { project: () => ({ x: 0, y: 0 }), bbox: null };
-  let minLat = Infinity;
-  let maxLat = -Infinity;
-  let minLng = Infinity;
-  let maxLng = -Infinity;
-  for (const p of points) {
-    if (p.lat < minLat) minLat = p.lat;
-    if (p.lat > maxLat) maxLat = p.lat;
-    if (p.lng < minLng) minLng = p.lng;
-    if (p.lng > maxLng) maxLng = p.lng;
-  }
-  const dLat = Math.max(1e-6, maxLat - minLat);
-  const dLng = Math.max(1e-6, maxLng - minLng);
-
-  // Compensate longitude for latitude (closer to poles ⇒ smaller deg).
-  const midLat = (minLat + maxLat) / 2;
-  const lngScale = Math.cos((midLat * Math.PI) / 180);
-  const dLngEff = dLng * lngScale;
-
-  const innerW = width - padding * 2;
-  const innerH = height - padding * 2;
-  const scale = Math.min(innerW / dLngEff, innerH / dLat);
-
-  const offsetX = (innerW - dLngEff * scale) / 2 + padding;
-  const offsetY = (innerH - dLat * scale) / 2 + padding;
-
-  return {
-    bbox: { minLat, maxLat, minLng, maxLng },
-    project: (lat, lng) => {
-      const x = (lng - minLng) * lngScale * scale + offsetX;
-      // SVG y axis points down; latitude grows up → flip.
-      const y = (maxLat - lat) * scale + offsetY;
-      return { x, y };
-    },
-  };
-}
 
 export default function RouteVisualizationScreen({ navigation, route }) {
   const initialRoutePlan = route?.params?.routePlan || null;
   const ticketId = route?.params?.ticketId || null;
 
-  const [routePlan, setRoutePlan] = useState(initialRoutePlan);
-  const [loadingPlan, setLoadingPlan] = useState(
-    !initialRoutePlan && !!ticketId
-  );
-  const [planError, setPlanError] = useState('');
-
-  // If we navigated here without an inline routePlan (e.g. from RideHistory),
-  // fetch the simulated user/pickup coords for this ticket.
-  useEffect(() => {
-    if (initialRoutePlan || !ticketId) return;
-    let cancelled = false;
-    setLoadingPlan(true);
-    setPlanError('');
-    getTicketRoutePlan(ticketId)
-      .then((data) => {
-        if (cancelled) return;
-        setRoutePlan(data);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setPlanError(
-          err?.response?.data?.msg || 'Không tải được dữ liệu định tuyến.'
-        );
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingPlan(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [initialRoutePlan, ticketId]);
-
-  const userPoint = routePlan?.user
-    ? { lat: routePlan.user.lat, lng: routePlan.user.lng }
-    : null;
-  const pickupPoint = routePlan?.pickup
-    ? { lat: routePlan.pickup.lat, lng: routePlan.pickup.lng }
-    : null;
-
-  const { data: osm, loading: routing, error: routingError } = useOsmRoute({
-    from: userPoint,
-    to: pickupPoint,
-  });
-
   const boardWidth = Math.min(SCREEN_WIDTH - spacing.xl * 2 - 32, 520);
   const boardHeight = Math.round(boardWidth * 0.75);
 
-  const projection = useMemo(() => {
-    const points = [];
-    if (osm?.path?.length) {
-      osm.path.forEach((p) => points.push({ lat: p.lat, lng: p.lng }));
-    }
-    if (userPoint) points.push(userPoint);
-    if (pickupPoint) points.push(pickupPoint);
-    return projectPath(points, boardWidth, boardHeight);
-  }, [osm, userPoint, pickupPoint, boardWidth, boardHeight]);
-
-  const pathPolyline = useMemo(() => {
-    if (!osm?.path?.length || !projection.bbox) return '';
-    return osm.path
-      .map((p) => {
-        const { x, y } = projection.project(p.lat, p.lng);
-        return `${x},${y}`;
-      })
-      .join(' ');
-  }, [osm, projection]);
+  const {
+    routePlan,
+    loadingPlan,
+    planError,
+    osm,
+    routing,
+    routingError,
+    userPoint,
+    pickupPoint,
+    projection,
+    pathPolyline,
+  } = useTicketRoutePlan({
+    initialRoutePlan,
+    ticketId,
+    boardWidth,
+    boardHeight,
+  });
 
   if (loadingPlan) {
     return (
@@ -177,11 +77,7 @@ export default function RouteVisualizationScreen({ navigation, route }) {
         showsVerticalScrollIndicator={false}
       >
         <GlassCard style={styles.card}>
-          <Text style={styles.title}>A* trên bản đồ Hà Nội (OSM)</Text>
-          <Text style={styles.subtle}>
-            f(n) = g(n) + h(n) • Heuristic: khoảng cách Haversine • Dữ liệu: hanoi.osm.pbf
-          </Text>
-
+          <Text style={styles.title}>Đường đi ngắn nhất đến điểm đón</Text>
           <View style={styles.legendRow}>
             <Legend color="#34D399" label="Bạn (start)" />
             <Legend color="#F87171" label="Điểm đón (goal)" />
@@ -216,25 +112,74 @@ export default function RouteVisualizationScreen({ navigation, route }) {
                 />
               ) : null}
 
-              {userPoint && projection.bbox ? (
-                <Circle
-                  cx={projection.project(userPoint.lat, userPoint.lng).x}
-                  cy={projection.project(userPoint.lat, userPoint.lng).y}
-                  r={7}
-                  fill="#34D399"
-                  stroke="#022C22"
+              {userPoint && osm?.start && projection.bbox ? (
+                <Line
+                  x1={projection.project(userPoint.lat, userPoint.lng).x}
+                  y1={projection.project(userPoint.lat, userPoint.lng).y}
+                  x2={projection.project(osm.start.lat, osm.start.lng).x}
+                  y2={projection.project(osm.start.lat, osm.start.lng).y}
+                  stroke="rgba(52, 211, 153, 0.7)"
                   strokeWidth={1.5}
+                  strokeDasharray="4,3"
                 />
               ) : null}
+
               {pickupPoint && projection.bbox ? (
-                <Circle
-                  cx={projection.project(pickupPoint.lat, pickupPoint.lng).x}
-                  cy={projection.project(pickupPoint.lat, pickupPoint.lng).y}
-                  r={7}
-                  fill="#F87171"
-                  stroke="#3B0A12"
-                  strokeWidth={1.5}
-                />
+                <>
+                  <Circle
+                    cx={projection.project(pickupPoint.lat, pickupPoint.lng).x}
+                    cy={projection.project(pickupPoint.lat, pickupPoint.lng).y}
+                    r={11}
+                    fill="rgba(248, 113, 113, 0.25)"
+                  />
+                  <Circle
+                    cx={projection.project(pickupPoint.lat, pickupPoint.lng).x}
+                    cy={projection.project(pickupPoint.lat, pickupPoint.lng).y}
+                    r={7}
+                    fill="#F87171"
+                    stroke="#FFFFFF"
+                    strokeWidth={2}
+                  />
+                  <SvgText
+                    x={projection.project(pickupPoint.lat, pickupPoint.lng).x + 10}
+                    y={projection.project(pickupPoint.lat, pickupPoint.lng).y + 4}
+                    fill="#FCA5A5"
+                    fontSize={10}
+                    fontWeight="bold"
+                  >
+                    Đón
+                  </SvgText>
+                </>
+              ) : null}
+
+              {/* Render user point LAST so it always sits on top of the
+                  polyline + pickup marker, even when they overlap. */}
+              {userPoint && projection.bbox ? (
+                <>
+                  <Circle
+                    cx={projection.project(userPoint.lat, userPoint.lng).x}
+                    cy={projection.project(userPoint.lat, userPoint.lng).y}
+                    r={12}
+                    fill="rgba(52, 211, 153, 0.25)"
+                  />
+                  <Circle
+                    cx={projection.project(userPoint.lat, userPoint.lng).x}
+                    cy={projection.project(userPoint.lat, userPoint.lng).y}
+                    r={8}
+                    fill="#34D399"
+                    stroke="#FFFFFF"
+                    strokeWidth={2}
+                  />
+                  <SvgText
+                    x={projection.project(userPoint.lat, userPoint.lng).x + 11}
+                    y={projection.project(userPoint.lat, userPoint.lng).y - 6}
+                    fill="#A7F3D0"
+                    fontSize={10}
+                    fontWeight="bold"
+                  >
+                    Bạn
+                  </SvgText>
+                </>
               ) : null}
             </Svg>
 
@@ -257,14 +202,8 @@ export default function RouteVisualizationScreen({ navigation, route }) {
           ) : null}
 
           <View style={styles.statsRow}>
-            <Stat
-              label="Số node duyệt"
-              value={osm?.nodesExplored ?? '--'}
-            />
-            <Stat
-              label="Node trên đường đi"
-              value={osm?.path?.length ?? '--'}
-            />
+            <Stat label="Số node duyệt" value={osm?.nodesExplored ?? '--'} />
+            <Stat label="Node trên đường đi" value={osm?.path?.length ?? '--'} />
             <Stat
               label="Quãng đường"
               value={formatMeters(osm?.distance)}
@@ -272,9 +211,7 @@ export default function RouteVisualizationScreen({ navigation, route }) {
             />
             <Stat
               label="Thời gian"
-              value={
-                osm?.runtimeMs != null ? `${osm.runtimeMs} ms` : '--'
-              }
+              value={osm?.runtimeMs != null ? `${osm.runtimeMs} ms` : '--'}
             />
           </View>
         </GlassCard>
@@ -385,16 +322,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendBox: {
-    width: 14,
-    height: 14,
-    borderRadius: 3,
-  },
-  legendLine: {
-    width: 18,
-    height: 4,
-    borderRadius: 2,
-  },
+  legendBox: { width: 14, height: 14, borderRadius: 3 },
+  legendLine: { width: 18, height: 4, borderRadius: 2 },
   legendText: { color: colors.text, fontSize: 11, fontWeight: '700' },
   boardWrap: {
     alignItems: 'center',
@@ -437,11 +366,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2,
   },
-  statValue: {
-    color: colors.text,
-    fontSize: 20,
-    fontWeight: '900',
-  },
+  statValue: { color: colors.text, fontSize: 20, fontWeight: '900' },
   statLabel: {
     color: colors.muted,
     fontSize: 11,

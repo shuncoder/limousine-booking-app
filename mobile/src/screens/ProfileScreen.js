@@ -1,65 +1,38 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+} from 'react-native';
 import { useLogout } from '../hooks/useLogout';
-import { getProfile, updateProfile, deleteAccount } from '../services/api';
-import { colors, spacing } from "../theme/theme";
+import useProfile from '../hooks/useProfile';
+import { colors, spacing } from '../theme/theme';
 import AppBackground from '../components/ui/AppBackground';
 import GlassCard from '../components/ui/GlassCard';
 import PrimaryButton from '../components/ui/PrimaryButton';
 
 export default function ProfileScreen({ navigation }) {
-
-  const [profile, setProfile] = useState(null);
-  const [editModalVisible, setEditModalVisible] = useState(false);
-  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [editName, setEditName] = useState('');
-  const [editPhone, setEditPhone] = useState('');
-  const [loading, setLoading] = useState(false);
   const { logout } = useLogout();
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      const data = await getProfile();
-      setProfile(data);
-    };
-    fetchProfile();
-  }, []);
-
-  const openEditModal = () => {
-    setEditName(profile?.name || '');
-    setEditPhone(profile?.phone || '');
-    setEditModalVisible(true);
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editName.trim() || !editPhone.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ họ tên và số điện thoại');
-      return;
-    }
-    setLoading(true);
-    try {
-      await updateProfile(editName, editPhone);
-      setProfile({ ...profile, name: editName, phone: editPhone });
-      setEditModalVisible(false);
-    } catch (e) {
-      Alert.alert('Lỗi', e.message || 'Không thể cập nhật hồ sơ');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteAccount = async () => {
-    setLoading(true);
-    try {
-      await deleteAccount();
-      setDeleteModalVisible(false);
-      logout();
-    } catch (e) {
-      Alert.alert('Lỗi', e.message || 'Không thể xóa tài khoản');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    profile,
+    loading,
+    editName,
+    setEditName,
+    editPhone,
+    setEditPhone,
+    editModalVisible,
+    deleteModalVisible,
+    openEditModal,
+    closeEditModal,
+    openDeleteModal,
+    closeDeleteModal,
+    saveEdit,
+    confirmDelete,
+  } = useProfile({ onLoggedOut: logout });
 
   if (!profile) {
     return (
@@ -111,7 +84,7 @@ export default function ProfileScreen({ navigation }) {
             <Text style={styles.value}>{profile.email}</Text>
           </View>
 
-          <TouchableOpacity style={styles.deleteBtn} onPress={() => setDeleteModalVisible(true)}>
+          <TouchableOpacity style={styles.deleteBtn} onPress={openDeleteModal}>
             <Text style={styles.deleteBtnText}>Xóa tài khoản</Text>
           </TouchableOpacity>
 
@@ -122,12 +95,11 @@ export default function ProfileScreen({ navigation }) {
           />
         </GlassCard>
 
-        {/* Modal chỉnh sửa hồ sơ */}
         <Modal
           visible={editModalVisible}
           animationType="slide"
           transparent
-          onRequestClose={() => setEditModalVisible(false)}
+          onRequestClose={closeEditModal}
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
@@ -147,35 +119,40 @@ export default function ProfileScreen({ navigation }) {
                 keyboardType="phone-pad"
                 editable={!loading}
               />
-              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 16 }}>
-                <TouchableOpacity onPress={() => setEditModalVisible(false)} disabled={loading}>
+              <View style={styles.modalActions}>
+                <TouchableOpacity onPress={closeEditModal} disabled={loading}>
                   <Text style={[styles.modalBtn, { color: colors.muted }]}>Hủy</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={handleSaveEdit} disabled={loading}>
-                  <Text style={[styles.modalBtn, { color: colors.primary, marginLeft: 24 }]}>{loading ? 'Đang lưu...' : 'Lưu'}</Text>
+                <TouchableOpacity onPress={saveEdit} disabled={loading}>
+                  <Text style={[styles.modalBtn, { color: colors.primary, marginLeft: 24 }]}>
+                    {loading ? 'Đang lưu...' : 'Lưu'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
           </View>
         </Modal>
 
-        {/* Modal xác nhận xóa tài khoản */}
         <Modal
           visible={deleteModalVisible}
           animationType="fade"
           transparent
-          onRequestClose={() => setDeleteModalVisible(false)}
+          onRequestClose={closeDeleteModal}
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Xác nhận xóa tài khoản?</Text>
-              <Text style={{ color: colors.muted, marginVertical: 12 }}>Bạn chắc chắn muốn xóa tài khoản? Hành động này không thể hoàn tác.</Text>
-              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 8 }}>
-                <TouchableOpacity onPress={() => setDeleteModalVisible(false)} disabled={loading}>
+              <Text style={styles.modalBody}>
+                Bạn chắc chắn muốn xóa tài khoản? Hành động này không thể hoàn tác.
+              </Text>
+              <View style={styles.modalActions}>
+                <TouchableOpacity onPress={closeDeleteModal} disabled={loading}>
                   <Text style={[styles.modalBtn, { color: colors.muted }]}>Hủy</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={handleDeleteAccount} disabled={loading}>
-                  <Text style={[styles.modalBtn, { color: colors.error, marginLeft: 24 }]}>{loading ? 'Đang xóa...' : 'Xóa'}</Text>
+                <TouchableOpacity onPress={confirmDelete} disabled={loading}>
+                  <Text style={[styles.modalBtn, { color: colors.error, marginLeft: 24 }]}>
+                    {loading ? 'Đang xóa...' : 'Xóa'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -190,89 +167,76 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: spacing.xl,
-    justifyContent: "center",
+    justifyContent: 'center',
   },
-
   center: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-
   loadingCard: {
     padding: spacing.xl,
-    alignItems: "center",
+    alignItems: 'center',
   },
-
   loadingText: {
     marginTop: spacing.md,
     color: colors.muted,
-    fontWeight: "600",
+    fontWeight: '600',
   },
-
   card: {
-    width: "100%",
+    width: '100%',
     maxWidth: 500,
-    alignSelf: "center",
+    alignSelf: 'center',
     padding: spacing.xl,
   },
-
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: spacing.lg,
   },
-
   backBtn: {
     fontSize: 22,
     fontWeight: '900',
     color: colors.text,
     marginRight: spacing.md,
   },
-
   title: {
     fontSize: 20,
-    fontWeight: "900",
+    fontWeight: '900',
     color: colors.text,
   },
-
   avatar: {
     width: 80,
     height: 80,
     borderRadius: 40,
     backgroundColor: colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    alignSelf: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'center',
     marginBottom: spacing.lg,
   },
-
   avatarText: {
-    color: "#fff",
+    color: '#fff',
     fontSize: 28,
-    fontWeight: "900",
+    fontWeight: '900',
   },
-
   infoBox: {
     marginBottom: spacing.lg,
     paddingBottom: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.15)",
+    borderBottomColor: 'rgba(255,255,255,0.15)',
   },
-
   label: {
     color: colors.muted,
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: '700',
   },
-
   value: {
     color: colors.text,
     fontSize: 16,
-    fontWeight: "800",
+    fontWeight: '800',
     marginTop: 4,
   },
-
   editBtn: {
     marginLeft: 'auto',
     paddingHorizontal: spacing.md,
@@ -323,6 +287,15 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: colors.text,
     marginBottom: 12,
+  },
+  modalBody: {
+    color: colors.muted,
+    marginVertical: 12,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 16,
   },
   modalBtn: {
     fontSize: 16,

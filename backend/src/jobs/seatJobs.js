@@ -1,5 +1,5 @@
 const Ticket = require('../models/Ticket');
-const { getIO } = require('../sockets/socket');
+const { getIO, emitTripSeatCount } = require('../sockets/socket');
 const { createNotification } = require('../utils/notify');
 
 async function expirePendingTicketsOnce() {
@@ -20,6 +20,7 @@ async function expirePendingTicketsOnce() {
   );
 
   const io = getIO();
+  const affectedTripIds = new Set();
 
   for (const t of toExpire) {
     if (io) {
@@ -31,6 +32,8 @@ async function expirePendingTicketsOnce() {
       });
     }
 
+    affectedTripIds.add(String(t.tripId));
+
     if (t.userId) {
       createNotification({
         userId: t.userId,
@@ -41,6 +44,10 @@ async function expirePendingTicketsOnce() {
         ticketId: t._id,
       }).catch(() => undefined);
     }
+  }
+
+  for (const tripId of affectedTripIds) {
+    emitTripSeatCount(tripId).catch(() => undefined);
   }
 }
 

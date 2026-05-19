@@ -206,10 +206,46 @@ export async function updatePromo(token: string, promoId: string, patch: Partial
   return apiFetch<Promo>(`/promos/${promoId}`, { token, method: "PATCH", body: patch });
 }
 
-export async function revenueByRoute(token: string) {
+export async function revenueByRoute(
+  token: string,
+  params?: { from?: string; to?: string }
+) {
+  const qs = new URLSearchParams();
+  if (params?.from) qs.set("from", params.from);
+  if (params?.to) qs.set("to", params.to);
+  const suffix = qs.toString() ? `?${qs.toString()}` : "";
   return apiFetch<{ items: Array<{ routeFrom: string; routeTo: string; revenue: number; tickets: number }> }>(
-    `/reports/revenue-by-route`,
+    `/reports/revenue-by-route${suffix}`,
     { token }
+  );
+}
+
+export type RevenueOverTimeItem = { period: string; revenue: number; tickets: number };
+
+export async function revenueOverTime(
+  token: string,
+  params?: { from?: string; to?: string; granularity?: "day" | "month" }
+) {
+  const qs = new URLSearchParams();
+  if (params?.from) qs.set("from", params.from);
+  if (params?.to) qs.set("to", params.to);
+  if (params?.granularity) qs.set("granularity", params.granularity);
+  const suffix = qs.toString() ? `?${qs.toString()}` : "";
+  return apiFetch<{
+    granularity: string;
+    from: string;
+    to: string;
+    items: RevenueOverTimeItem[];
+  }>(`/reports/revenue-over-time${suffix}`, { token });
+}
+
+export async function analyzeRevenueWithAi(
+  token: string,
+  body: { question?: string; from?: string; to?: string }
+) {
+  return apiFetch<{ analysis: string; model: string; snapshotMeta: Record<string, unknown> }>(
+    `/reports/analyze-revenue-ai`,
+    { token, method: "POST", body }
   );
 }
 

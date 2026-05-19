@@ -13,6 +13,7 @@ import { colors, spacing } from '../theme/theme';
 import AppBackground from '../components/ui/AppBackground';
 import GlassCard from '../components/ui/GlassCard';
 import { useNotifications } from '../hooks/useNotifications';
+import { formatRelativeTime } from '../utils/bookingFormatters';
 
 const TYPE_META = {
   ticket_created: { icon: 'ticket-outline', color: '#FCD34D' },
@@ -22,32 +23,6 @@ const TYPE_META = {
   driver_new_passenger: { icon: 'people-outline', color: '#60A5FA' },
   system: { icon: 'megaphone-outline', color: colors.brand },
 };
-
-function formatRelative(value) {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-
-  const diffMs = Date.now() - date.getTime();
-  const diffMin = Math.round(diffMs / 60000);
-
-  if (diffMin < 1) return 'Vừa xong';
-  if (diffMin < 60) return `${diffMin} phút trước`;
-
-  const diffHr = Math.round(diffMin / 60);
-  if (diffHr < 24) return `${diffHr} giờ trước`;
-
-  const diffDay = Math.round(diffHr / 24);
-  if (diffDay < 7) return `${diffDay} ngày trước`;
-
-  return date.toLocaleString('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 export default function NotificationScreen() {
   const {
@@ -127,7 +102,7 @@ export default function NotificationScreen() {
                           {item.body}
                         </Text>
                       ) : null}
-                      <Text style={styles.timeText}>{formatRelative(item.createdAt)}</Text>
+                      <Text style={styles.timeText}>{formatRelativeTime(item.createdAt)}</Text>
                     </View>
                   </TouchableOpacity>
                 );

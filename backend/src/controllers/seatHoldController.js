@@ -1,7 +1,7 @@
 const Trip = require('../models/Trip');
 const SeatHold = require('../models/SeatHold');
 const Ticket = require('../models/Ticket');
-const { getIO } = require('../sockets/socket');
+const { getIO, emitTripSeatCount } = require('../sockets/socket');
 
 function toInt(value, fallback) {
   const n = Number.parseInt(String(value ?? ''), 10);
@@ -81,6 +81,8 @@ exports.holdSeat = async (req, res) => {
       });
     }
 
+    emitTripSeatCount(trip._id).catch(() => undefined);
+
     res.json(hold);
   } catch (err) {
     console.error("HOLD SEAT ERROR:", err); 
@@ -111,6 +113,8 @@ exports.releaseSeat = async (req, res) => {
         seatId,
       });
     }
+
+    emitTripSeatCount(tripId).catch(() => undefined);
 
     res.json({ ok: true });
   } catch (err) {

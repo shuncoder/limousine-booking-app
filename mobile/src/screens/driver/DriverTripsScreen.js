@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,12 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { listMyDriverTrips } from '../../services/api';
-import { connectSocket } from '../../services/socket';
 import { colors, spacing } from '../../theme/theme';
 import AppBackground from '../../components/ui/AppBackground';
 import GlassCard from '../../components/ui/GlassCard';
+import useDriverTrips from '../../hooks/useDriverTrips';
+import { formatDateTime } from '../../utils/bookingFormatters';
 
 const FILTERS = [
   { id: 'upcoming', label: 'Sắp tới' },
@@ -27,90 +26,16 @@ const STATUS_META = {
   cancelled: { label: 'Đã hủy', color: '#FCA5A5', bg: 'rgba(252,165,165,0.18)' },
 };
 
-function formatDateTime(value) {
-  if (!value) return '--';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '--';
-  return date.toLocaleString('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
 export default function DriverTripsScreen({ navigation }) {
-  const [trips, setTrips] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState('');
-  const [filter, setFilter] = useState('upcoming');
-  const socketRef = useRef(null);
-
-  const fetchTrips = useCallback(
-    async (silent = false) => {
-      try {
-        if (!silent) setLoading(true);
-        setError('');
-        const data = await listMyDriverTrips({
-          upcoming: filter === 'upcoming',
-          limit: 50,
-        });
-        setTrips(data.items);
-      } catch (err) {
-        setError(err?.response?.data?.msg || 'Không tải được danh sách chuyến.');
-      } finally {
-        if (!silent) setLoading(false);
-      }
-    },
-    [filter]
-  );
-
-  useEffect(() => {
-    fetchTrips();
-  }, [fetchTrips]);
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchTrips(true);
-    }, [fetchTrips])
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    let socket;
-    const handleNew = (notification) => {
-      if (cancelled) return;
-      if (notification?.type === 'driver_new_passenger') {
-        fetchTrips(true);
-      }
-    };
-
-    (async () => {
-      try {
-        socket = await connectSocket();
-        socketRef.current = socket;
-        socket.on('notification:new', handleNew);
-      } catch {
-        // ignore
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      if (socketRef.current) {
-        socketRef.current.off('notification:new', handleNew);
-        socketRef.current = null;
-      }
-    };
-  }, [fetchTrips]);
-
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await fetchTrips(true);
-    setRefreshing(false);
-  }, [fetchTrips]);
+  const {
+    trips,
+    filter,
+    setFilter,
+    loading,
+    refreshing,
+    error,
+    refresh,
+  } = useDriverTrips();
 
   return (
     <AppBackground>
@@ -155,7 +80,7 @@ export default function DriverTripsScreen({ navigation }) {
               refreshControl={
                 <RefreshControl
                   refreshing={refreshing}
-                  onRefresh={handleRefresh}
+                  onRefresh={refresh}
                   tintColor={colors.text}
                 />
               }
@@ -163,6 +88,9 @@ export default function DriverTripsScreen({ navigation }) {
                 const meta = STATUS_META[item.status] || STATUS_META.scheduled;
                 const totalSeats = item.totalSeats || 0;
                 const booked = item.bookedSeats || 0;
+                const fillPct = totalSeats
+                  ? `${Math.min(100, Math.round((booked / totalSeats) * 100))}%`
+                  : '0%';
 
                 return (
                   <TouchableOpacity
@@ -208,16 +136,7 @@ export default function DriverTripsScreen({ navigation }) {
 
                     <View style={styles.actionRow}>
                       <View style={styles.fillBar}>
-                        <View
-                          style={[
-                            styles.fillBarFg,
-                            {
-                              width: totalSeats
-                                ? `${Math.min(100, Math.round((booked / totalSeats) * 100))}%`
-                                : '0%',
-                            },
-                          ]}
-                        />
+                        <View style={[styles.fillBarFg, { width: fillPct }]} />
                       </View>
                       <Text style={styles.viewLink}>Xem khách →</Text>
                     </View>

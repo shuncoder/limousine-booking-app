@@ -1,127 +1,49 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
 import AppBackground from '../components/ui/AppBackground';
 import GlassCard from '../components/ui/GlassCard';
 import PrimaryButton from '../components/ui/PrimaryButton';
 import { colors, spacing } from '../theme/theme';
-import { payTicket } from '../services/api';
-import { createTripSocket } from '../services/socket';
-import QRCode from 'react-native-qrcode-svg';
 import {
   formatCurrency,
   formatDateTime,
   formatPointLabel,
 } from '../utils/bookingFormatters';
-import usePaymentCountdown from '../hooks/usePaymentCountdown';
+import useTicketPayment from '../hooks/useTicketPayment';
 
 export default function PaymentScreen({ navigation, route }) {
   const trip = route?.params?.trip;
   const tickets = Array.isArray(route?.params?.tickets) ? route.params.tickets : [];
-  const passengers = Number(route?.params?.passengers || tickets.length || 1);
-  const selectedSeatIds = Array.isArray(route?.params?.selectedSeatIds)
-    ? route.params.selectedSeatIds
-    : tickets.map((item) => String(item?.seatId || '')).filter(Boolean);
-
   const pickupPoint = route?.params?.pickupPoint;
   const dropoffPoint = route?.params?.dropoffPoint;
   const travelDate = route?.params?.travelDate || '';
   const summary = route?.params?.summary || null;
-  const totalAmount = Number(
-    summary?.totalAmount ?? route?.params?.totalAmount ?? 0
-  );
-  const currency = summary?.currency || tickets[0]?.currency || trip?.currency || 'VND';
 
-  const expiresAtList = useMemo(
-    () => tickets.map((t) => t?.expiresAt).filter(Boolean),
-    [tickets]
-  );
-  const { leftSeconds, formatted: countdown, expired, setLeftSeconds } =
-    usePaymentCountdown(expiresAtList);
-
-  const [message, setMessage] = useState('');
-  const [paying, setPaying] = useState(false);
-  const [paid, setPaid] = useState(false);
-
-  const socketRef = useRef(null);
-
-  useEffect(() => {
-    if (!trip?._id) return undefined;
-    let cancelled = false;
-
-    (async () => {
-      const socket = await createTripSocket();
-      if (cancelled) {
-        socket.disconnect();
-        return;
-      }
-
-      socketRef.current = socket;
-      socket.emit('join_trip', { tripId: trip._id });
-      socket.on('seat_update', (payload) => {
-        if (String(payload?.tripId) !== String(trip._id)) return;
-        if (!selectedSeatIds.includes(String(payload?.seatId || ''))) return;
-
-        if (payload?.status === 'available' && !paid) {
-          setMessage('Đã hết thời gian giữ ghế hoặc ghế đã được giải phóng.');
-          setLeftSeconds(0);
-        }
-      });
-    })();
-
-    return () => {
-      cancelled = true;
-      if (socketRef.current) {
-        socketRef.current.emit('leave_trip', { tripId: trip._id });
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paid, selectedSeatIds, trip?._id]);
-
-  const qrValue = useMemo(() => {
-    const ticketIds = tickets
-      .map((item) => item?._id)
-      .filter(Boolean)
-      .join(',');
-    return `PAY|trip=${trip?._id || ''}|tickets=${ticketIds}|amount=${totalAmount}|currency=${currency}`;
-  }, [currency, tickets, totalAmount, trip?._id]);
-
-  const expectedMinutes = useMemo(
-    () => Math.max(1, Math.ceil(leftSeconds / 60) || 15),
-    [leftSeconds]
-  );
-
-  const handleConfirmPaid = async () => {
-    setPaying(true);
-    setMessage('');
-
-    try {
-      const ticketIds = tickets.map((t) => t?._id).filter(Boolean);
-      const responses = await Promise.all(
-        ticketIds.map((ticketId) => payTicket(ticketId))
-      );
-
-      setPaid(true);
-      setMessage('Thanh toán thành công!');
-
-      const firstWithRoute = responses.find((r) => r?.routePlan);
-      const firstTicketId = ticketIds[0];
-
-      setTimeout(() => {
-        navigation.replace('RouteVisualization', {
-          routePlan: firstWithRoute?.routePlan || null,
-          ticketId: firstTicketId,
-        });
-      }, 600);
-    } catch (error) {
-      setMessage(
-        error?.response?.data?.msg || 'Thanh toán thất bại hoặc vé đã hết hạn.'
-      );
-    } finally {
-      setPaying(false);
-    }
-  };
+  const {
+    selectedSeatIds,
+    passengers,
+    totalAmount,
+    currency,
+    qrValue,
+    countdown,
+    expired,
+    expectedMinutes,
+    paying,
+    paid,
+    message,
+    confirmPaid,
+  } = useTicketPayment({
+    trip,
+    tickets,
+    passengersFromParams: route?.params?.passengers,
+    selectedSeatIdsFromParams: route?.params?.selectedSeatIds,
+    summary,
+    totalAmountFromParams: route?.params?.totalAmount,
+    onPaid: ({ routePlan, ticketId }) => {
+      navigation.replace('RouteVisualization', { routePlan, ticketId });
+    },
+  });
 
   return (
     <AppBackground>
@@ -177,7 +99,7 @@ export default function PaymentScreen({ navigation, route }) {
 
           <PrimaryButton
             title={paid ? 'Đã thanh toán' : 'Tôi đã thanh toán'}
-            onPress={handleConfirmPaid}
+            onPress={confirmPaid}
             loading={paying}
             disabled={paid || expired || paying}
           />

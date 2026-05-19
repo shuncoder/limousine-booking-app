@@ -1,40 +1,25 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, Keyboard, TouchableWithoutFeedback } from 'react-native';
-import { completeProfile } from '../services/api';
-import { colors, spacing } from "../theme/theme";
-import PrimaryButton from "../components/ui/PrimaryButton";
-import TextField from "../components/ui/TextField";
-import { setTokens, setUserSession } from "../services/tokenStorage";
-import { connectSocket } from "../services/socket";
+import { colors, spacing } from '../theme/theme';
+import PrimaryButton from '../components/ui/PrimaryButton';
+import TextField from '../components/ui/TextField';
 import AppBackground from '../components/ui/AppBackground';
 import GlassCard from '../components/ui/GlassCard';
+import useRegisterProfile from '../hooks/useRegisterProfile';
 
 export default function RegisterScreen({ navigation, route }) {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const onboardingToken = route?.params?.onboardingToken || '';
 
-  const handleRegister = async () => {
-    try {
-      setLoading(true);
-      const res = await completeProfile(name, phone);
-      await setTokens(res.token);
-      const role = res.user?.role || 'user';
-      await setUserSession({ role, id: res.user?.id });
-      try {
-        await connectSocket();
-      } catch {
-        // ignore
-      }
-      navigation.replace(role === 'driver' ? 'DriverMain' : 'Main');
-    } catch (err) {
-      setError('Đăng ký thất bại');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    name,
+    setName,
+    phone,
+    setPhone,
+    error,
+    loading,
+    canSubmit,
+    submit,
+  } = useRegisterProfile({ navigation, onboardingToken });
 
   return (
     <AppBackground>
@@ -65,9 +50,9 @@ export default function RegisterScreen({ navigation, route }) {
             />
             <PrimaryButton
               title="Hoàn tất đăng ký"
-              onPress={handleRegister}
+              onPress={submit}
               loading={loading}
-              disabled={!name || !phone || !onboardingToken}
+              disabled={!canSubmit || loading}
               variant="success"
             />
           </GlassCard>
@@ -80,33 +65,33 @@ export default function RegisterScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: 'center',
     padding: spacing.xl,
   },
   card: {
     maxWidth: 520,
-    width: "100%",
-    alignSelf: "center",
+    width: '100%',
+    alignSelf: 'center',
   },
   badge: {
-    color: "rgba(234,240,255,0.95)",
+    color: 'rgba(234,240,255,0.95)',
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: '800',
     letterSpacing: 0.8,
     marginBottom: spacing.sm,
-    textTransform: "uppercase",
+    textTransform: 'uppercase',
   },
-  title: { color: colors.text, fontSize: 22, fontWeight: "800" },
-  subtitle: { color: "rgba(234,240,255,0.78)", marginTop: spacing.xs, marginBottom: spacing.lg },
+  title: { color: colors.text, fontSize: 22, fontWeight: '800' },
+  subtitle: { color: 'rgba(234,240,255,0.78)', marginTop: spacing.xs, marginBottom: spacing.lg },
   error: {
-    color: "#FFD6DA",
-    backgroundColor: "rgba(239,68,68,0.25)",
+    color: '#FFD6DA',
+    backgroundColor: 'rgba(239,68,68,0.25)',
     borderWidth: 1,
-    borderColor: "rgba(255,208,214,0.6)",
+    borderColor: 'rgba(255,208,214,0.6)',
     borderRadius: 12,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     marginBottom: spacing.md,
-    fontWeight: "600",
+    fontWeight: '600',
   },
 });

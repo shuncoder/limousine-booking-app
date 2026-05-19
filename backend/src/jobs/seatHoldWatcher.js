@@ -1,5 +1,5 @@
 const SeatHold = require('../models/SeatHold');
-const { getIO } = require('../sockets/socket');
+const { getIO, emitTripSeatCount } = require('../sockets/socket');
 
 async function expireSeatHoldsOnce(limit = 500) {
   const now = new Date();
@@ -13,15 +13,22 @@ async function expireSeatHoldsOnce(limit = 500) {
   await SeatHold.deleteMany({ _id: { $in: ids } });
 
   const io = getIO();
-  if (!io) return;
+  const affectedTripIds = new Set();
 
   for (const hold of expired) {
-    io.to(`trip:${hold.tripId}`).emit('seat_update', {
-      tripId: String(hold.tripId),
-      seatId: hold.seatId,
-      status: 'available',
-      reason: 'hold_expired',
-    });
+    if (io) {
+      io.to(`trip:${hold.tripId}`).emit('seat_update', {
+        tripId: String(hold.tripId),
+        seatId: hold.seatId,
+        status: 'available',
+        reason: 'hold_expired',
+      });
+    }
+    affectedTripIds.add(String(hold.tripId));
+  }
+
+  for (const tripId of affectedTripIds) {
+    emitTripSeatCount(tripId).catch(() => undefined);
   }
 }
 

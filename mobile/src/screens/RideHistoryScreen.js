@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,16 @@ import {
   RefreshControl,
   ActivityIndicator,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
-import { listMyTickets, cancelTicket } from '../services/api';
 import { colors, spacing } from '../theme/theme';
 import AppBackground from '../components/ui/AppBackground';
 import GlassCard from '../components/ui/GlassCard';
+import useTicketHistory from '../hooks/useTicketHistory';
+import {
+  formatCurrency,
+  formatDateTime,
+  formatPointDetail,
+} from '../utils/bookingFormatters';
 
 const STATUS_FILTERS = [
   { id: 'all', label: 'Tất cả' },
@@ -30,110 +33,17 @@ const STATUS_META = {
   expired: { label: 'Hết hạn', color: '#94A3B8', bg: 'rgba(148,163,184,0.18)' },
 };
 
-function formatCurrency(value, currency = 'VND') {
-  try {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 0,
-    }).format(Number(value || 0));
-  } catch {
-    return `${value} ${currency}`;
-  }
-}
-
-function formatDateTime(value) {
-  if (!value) return '--';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '--';
-  return date.toLocaleString('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function formatPoint(point, fallback = '--') {
-  if (!point) return fallback;
-  const name = String(point.name || '').trim();
-  const address = String(point.address || '').trim();
-  return [name, address].filter(Boolean).join(' • ') || fallback;
-}
-
 export default function RideHistoryScreen({ navigation }) {
-  const [tickets, setTickets] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-
-  const fetchTickets = useCallback(
-    async (silent = false) => {
-      try {
-        if (!silent) setLoading(true);
-        setError('');
-        const params = statusFilter === 'all' ? {} : { status: statusFilter };
-        const data = await listMyTickets({ ...params, limit: 50 });
-        setTickets(data.items);
-      } catch (err) {
-        setError(err?.response?.data?.msg || 'Không tải được danh sách vé.');
-      } finally {
-        if (!silent) setLoading(false);
-      }
-    },
-    [statusFilter]
-  );
-
-  useEffect(() => {
-    fetchTickets();
-  }, [fetchTickets]);
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchTickets(true);
-    }, [fetchTickets])
-  );
-
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await fetchTickets(true);
-    setRefreshing(false);
-  }, [fetchTickets]);
-
-  const handleCancelTicket = useCallback(
-    (ticket) => {
-      if (!ticket?._id) return;
-      if (!['pending', 'paid'].includes(ticket.status)) return;
-
-      Alert.alert(
-        'Hủy vé',
-        `Bạn chắc chắn muốn hủy vé ghế ${ticket.seatId}?`,
-        [
-          { text: 'Không', style: 'cancel' },
-          {
-            text: 'Hủy vé',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                await cancelTicket(ticket._id, 'Khách tự hủy');
-                await fetchTickets(true);
-              } catch (err) {
-                Alert.alert(
-                  'Lỗi',
-                  err?.response?.data?.msg || 'Không thể hủy vé. Vui lòng thử lại.'
-                );
-              }
-            },
-          },
-        ]
-      );
-    },
-    [fetchTickets]
-  );
-
-  const grouped = useMemo(() => tickets, [tickets]);
+  const {
+    tickets,
+    statusFilter,
+    setStatusFilter,
+    loading,
+    refreshing,
+    error,
+    refresh,
+    confirmCancelTicket,
+  } = useTicketHistory();
 
   return (
     <AppBackground>
@@ -167,13 +77,13 @@ export default function RideHistoryScreen({ navigation }) {
             </View>
           ) : (
             <FlatList
-              data={grouped}
+              data={tickets}
               keyExtractor={(item) => String(item._id)}
               contentContainerStyle={styles.list}
               refreshControl={
                 <RefreshControl
                   refreshing={refreshing}
-                  onRefresh={handleRefresh}
+                  onRefresh={refresh}
                   tintColor={colors.text}
                 />
               }
@@ -209,14 +119,14 @@ export default function RideHistoryScreen({ navigation }) {
                     <View style={styles.row}>
                       <Text style={styles.label}>Điểm đón</Text>
                       <Text style={styles.value} numberOfLines={2}>
-                        {formatPoint(item.pickupPoint)}
+                        {formatPointDetail(item.pickupPoint)}
                       </Text>
                     </View>
 
                     <View style={styles.row}>
                       <Text style={styles.label}>Điểm trả</Text>
                       <Text style={styles.value} numberOfLines={2}>
-                        {formatPoint(item.dropoffPoint)}
+                        {formatPointDetail(item.dropoffPoint)}
                       </Text>
                     </View>
 
@@ -256,13 +166,13 @@ export default function RideHistoryScreen({ navigation }) {
                             })
                           }
                         >
-                          <Text style={styles.routeBtnText}>Xem định tuyến A*</Text>
+                          <Text style={styles.routeBtnText}>Xem đường đến điểm đón</Text>
                         </TouchableOpacity>
                       ) : null}
                       {['pending', 'paid'].includes(item.status) ? (
                         <TouchableOpacity
                           style={styles.cancelBtn}
-                          onPress={() => handleCancelTicket(item)}
+                          onPress={() => confirmCancelTicket(item)}
                         >
                           <Text style={styles.cancelBtnText}>Hủy vé</Text>
                         </TouchableOpacity>

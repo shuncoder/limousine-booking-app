@@ -28,6 +28,19 @@ export function formatDateTime(value) {
   });
 }
 
+/** Compact "DD/MM HH:mm" – used by driver dashboards. */
+export function formatDayTimeShort(value) {
+  if (!value) return '--';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '--';
+  return date.toLocaleString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 export function formatDate(value) {
   if (!value) return '--';
   const date = new Date(value);
@@ -49,6 +62,43 @@ export function formatPointLabel(point, fallback = '--') {
   const address = String(point.address || '').trim();
   const label = [name, address].filter(Boolean).join(' - ');
   return label || fallback;
+}
+
+/**
+ * Like formatPointLabel but uses ' • ' as a separator (used in passenger /
+ * ticket detail rows).
+ */
+export function formatPointDetail(point, fallback = '--') {
+  if (!point) return fallback;
+  if (typeof point === 'string') return point;
+  const name = String(point.name || '').trim();
+  const address = String(point.address || '').trim();
+  const label = [name, address].filter(Boolean).join(' • ');
+  return label || fallback;
+}
+
+/**
+ * Returns a human-friendly Vietnamese relative time (e.g. "3 phút trước").
+ * Falls back to a full date for anything older than a week.
+ */
+export function formatRelativeTime(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const diffMs = Date.now() - date.getTime();
+  const diffMin = Math.round(diffMs / 60000);
+
+  if (diffMin < 1) return 'Vừa xong';
+  if (diffMin < 60) return `${diffMin} phút trước`;
+
+  const diffHr = Math.round(diffMin / 60);
+  if (diffHr < 24) return `${diffHr} giờ trước`;
+
+  const diffDay = Math.round(diffHr / 24);
+  if (diffDay < 7) return `${diffDay} ngày trước`;
+
+  return formatDateTime(value);
 }
 
 export function buildPointOptionLabel(point) {
