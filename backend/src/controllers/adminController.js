@@ -30,8 +30,7 @@ exports.listUsers = async (req, res) => {
       User.find(filter)
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit)
-        .select('-googleId'),
+        .limit(limit),
       User.countDocuments(filter),
     ]);
 
@@ -61,7 +60,7 @@ exports.listDrivers = async (req, res) => {
         .sort({ name: 1, createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .select('-googleId -otpHash -otpExpiresAt -passwordHash'),
+        .select('-otpHash -otpExpiresAt -passwordHash'),
       User.countDocuments(filter),
     ]);
 
@@ -73,7 +72,7 @@ exports.listDrivers = async (req, res) => {
 
 exports.promoteUserToDriver = async (req, res) => {
   try {
-    const before = await User.findById(req.params.id).select('-googleId');
+    const before = await User.findById(req.params.id);
     if (!before) return res.status(404).json({ msg: 'User not found' });
     if (['admin'].includes(before.role)) {
       return res.status(400).json({ msg: 'Không thể đổi vai trò admin' });
@@ -83,7 +82,7 @@ exports.promoteUserToDriver = async (req, res) => {
       req.params.id,
       { role: 'driver' },
       { new: true }
-    ).select('-googleId');
+    );
 
     await createAdminLog({
       adminUserId: req.user.id,
@@ -102,7 +101,7 @@ exports.promoteUserToDriver = async (req, res) => {
 
 exports.demoteDriver = async (req, res) => {
   try {
-    const before = await User.findById(req.params.id).select('-googleId');
+    const before = await User.findById(req.params.id);
     if (!before) return res.status(404).json({ msg: 'User not found' });
     if (before.role !== 'driver') {
       return res.status(400).json({ msg: 'Người dùng này không phải driver' });
@@ -112,7 +111,7 @@ exports.demoteDriver = async (req, res) => {
       req.params.id,
       { role: 'user' },
       { new: true }
-    ).select('-googleId');
+    );
 
     await createAdminLog({
       adminUserId: req.user.id,
@@ -137,10 +136,10 @@ exports.updateUserRole = async (req, res) => {
       return res.status(400).json({ msg: 'Invalid role' });
     }
 
-    const before = await User.findById(req.params.id).select('-googleId');
+    const before = await User.findById(req.params.id);
     if (!before) return res.status(404).json({ msg: 'User not found' });
 
-    const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true }).select('-googleId');
+    const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true });
 
     await createAdminLog({
       adminUserId: req.user.id,

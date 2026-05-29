@@ -6,63 +6,9 @@ const { createAdminLog } = require('../utils/adminAudit');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-jwt-secret';
 
-function isAllowedRedirectUrl(rawUrl) {
-  if (!rawUrl) return false;
-  try {
-    const url = new URL(rawUrl);
-    const allowedOrigins = [
-      process.env.MOBILE_APP_URL,
-      process.env.WEBADMIN_URL,
-      process.env.WEB_URL,
-    ].filter(Boolean);
-    if (allowedOrigins.length === 0) return false;
-    return allowedOrigins.some((origin) => {
-      try {
-        const o = new URL(origin);
-        return url.origin === o.origin;
-      } catch {
-        return false;
-      }
-    });
-  } catch {
-    return false;
-  }
-}
-
-// Google OAuth Callback
-exports.googleAuth = (req, res) => {
-  try {
-    const user = req.user;
-    if (!user) return res.status(401).json({ msg: 'Authentication failed' });
-    
-    // Tạo JWT token
-    const payload = { user: { id: user.id, role: user.role || 'user' } };
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
-    
-    // Redirect về mobile app với token (hoặc return JSON)
-    const requestedRedirect = req.query.redirect;
-    const base =
-      (isAllowedRedirectUrl(requestedRedirect) && requestedRedirect) ||
-      process.env.MOBILE_APP_URL ||
-      'http://localhost:3000';
-
-    const url = new URL(base);
-    url.searchParams.set('token', token);
-    url.searchParams.set('userId', user.id);
-    url.searchParams.set('role', user.role || 'user');
-
-    res.redirect(url.toString());
-  } catch (err) {
-    res.status(500).json({ msg: 'Server error' });
-  }
-};
-
-// Logout
-exports.logout = (req, res) => {
-  req.logout((err) => {
-    if (err) return res.status(500).json({ msg: 'Logout failed' });
-    res.json({ msg: 'Logged out successfully' });
-  });
+// JWT-only logout: client clears stored token
+exports.logout = (_req, res) => {
+  res.json({ msg: 'Logged out successfully' });
 };
 
 // Get current user
@@ -142,8 +88,6 @@ exports.startEmailOtp = async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
     if (!email) return res.status(400).json({ msg: 'Email is required' });
-
-    // Only allow user/driver (not admin) via mobile flow
     let user = await User.findOne({ email });
     const isNew = !user;
 
@@ -160,7 +104,7 @@ exports.startEmailOtp = async (req, res) => {
     user.otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
     await user.save();
 
-    // Send OTP via Gmail SMTP (real email)
+    // Send OTP via SMTP (Nodemailer)
     try {
       await sendOtpEmail(email, otp);
     } catch (mailErr) {

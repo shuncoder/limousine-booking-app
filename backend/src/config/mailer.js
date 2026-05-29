@@ -28,9 +28,7 @@ async function sendOtpEmail(toEmail, otp) {
   try {
 
     await transporter.verify();
-
     console.log('Mail transporter is ready');
-
     const info = await transporter.sendMail({
       from,
       to: toEmail,

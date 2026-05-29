@@ -1,23 +1,26 @@
-# Mobile — ứng dụng đặt limousine (React Native / Expo)
+# Mobile — ứng dụng đặt limousine (Expo)
 
-Ứng dụng cho **hành khách** (đặt vé, ghế, thanh toán, lịch sử, thông báo) và **tài xế** (dashboard, danh sách chuyến, hành khách). Entry: `App.js` → `src/navigation/AppNavigator`.
+Ứng dụng React Native (Expo) cho **hành khách** (đặt vé, ghế realtime, thanh toán, lịch sử, thông báo) và **tài xế** (dashboard, danh sách chuyến, hành khách).
+
+Entry: `App.js` → `src/navigation/AppNavigator.js`.
 
 ## Công nghệ
 
-| Gói / công cụ | Vai trò |
-|----------------|---------|
-| **Expo** (~54), **React Native** | Build & runtime |
-| **React Navigation** (stack + tabs) | Luồng Login → Main/Driver và form đặt vé |
-| **Axios** + **`axiosWithRefresh.js`** | Gọi API với JWT refresh khi `401` |
-| **socket.io-client** | Realtime ghế / sự kiện (qua `src/services/socket.js`) |
-| **AsyncStorage** | Token & dữ liệu cục bộ |
-| Các dependency UI | Vector icons, datetime picker, gesture handler, SVG (QR code), safe area, screens |
+| Gói | Vai trò |
+|-----|---------|
+| **Expo** (~54), **React Native** | Runtime & build |
+| **React Navigation** (stack + tabs) | Login → Main / DriverMain + luồng đặt vé |
+| **Axios** (`axiosWithRefresh.js`) | REST API, header JWT |
+| **socket.io-client** | Ghế & thông báo realtime |
+| **AsyncStorage** | Token (`tokenStorage.js`) |
+| **react-native-qrcode-svg**, **SVG** | QR thanh toán |
+| **@react-native-community/datetimepicker** | Chọn ngày/giờ |
 
 ## Yêu cầu
 
-- Node.js và npm/yarn  
-- Expo CLI (khuyến nghị `npx expo`—không nhất thiết cài global)  
-- Máy thật hoặc emulator Android / iOS; backend phải truy cập được từ thiết bị (Wi‑Fi LAN hoặc tunnel)
+- Node.js, npm
+- Expo Go hoặc emulator Android / iOS
+- Backend chạy và **truy cập được từ thiết bị** (cùng Wi‑Fi LAN; không dùng `localhost` trên máy thật)
 
 ## Cài đặt
 
@@ -26,60 +29,128 @@ cd mobile
 npm install
 ```
 
-## Chạy dự án
+## Chạy
 
 ```bash
-npm start          # expo start — script trong package.json có set REACT_NATIVE_PACKAGER_HOSTNAME
-npm run android    # expo start --android
-npm run ios        # expo start --ios (macOS + Xcode)
+npm start          # expo start
+npm run android
+npm run ios        # macOS + Xcode
 ```
 
-**Quan trọng:** trong `package.json`, script `start` đang cố định `REACT_NATIVE_PACKAGER_HOSTNAME` về một IP LAN. **Đổi thành IP máy đang chạy Metro trên mạng của bạn**, nếu không thiết bị/emulator không tải bundle được.
+Script `start` trong `package.json` có thể set `REACT_NATIVE_PACKAGER_HOSTNAME` — **đổi thành IP máy đang chạy Metro** nếu thiết bị không tải được bundle.
 
-### Kết nối tới backend
+### Kết nối backend
 
-Trong `src/services/axiosWithRefresh.js`:
+Sửa trong `src/services/axiosWithRefresh.js`:
 
-- **`API_URL`** — base URL REST, dạng `http://<IP-máy-chạy-backend>:<PORT>/api`  
-  - Ví dụ thiết bị và backend cùng LAN: IP máy dev (không dùng `localhost` trên điện thoại).  
-  - **`API_ORIGIN`** suy ra từ `API_URL` (bỏ hậu tố `/api`) cho socket / static upload.
+```js
+export const API_URL = 'http://<IP-máy-dev>:5000/api';
+export const API_ORIGIN = API_URL.replace(/\/api$/, '');
+```
 
-Sau khi sửa `API_URL`, khởi động lại bundler và app.
+- **`API_URL`** — REST (`/api/...`)
+- **`API_ORIGIN`** — Socket.IO và URL ảnh upload (`/uploads/...`)
 
-### Token
+Khởi động lại bundler sau khi đổi IP.
 
-**`src/services/tokenStorage.js`** lưu access/refresh token. Interceptor trong `axiosWithRefresh` gọi `POST /auth/refresh-token` khi hết hạn; thất bại thì clear token.
+### Xác thực
+
+- Đăng nhập: **OTP email** (`/auth/email/start`, `verify`, `complete`) — lưu JWT qua `tokenStorage.js`, gọi API qua `services/api.js`.
+- `axiosWithRefresh.js` có interceptor refresh khi `401`; backend hiện trả chủ yếu field `token` (access đơn). Đăng nhập lại nếu hết hạn.
+
+Socket: `src/services/socket.js` — kết nối `API_ORIGIN`, gửi JWT trong `auth.token`, join room qua hooks (`useSeatSocket`, v.v.).
+
+## Điều hướng
+
+```
+AppNavigator (Stack)
+├── Login, Register
+├── Main → MainTabNavigator
+│     ├── Trang Chủ (HomeScreen)
+│     ├── Lịch Sử Chuyến (RideHistoryScreen)
+│     ├── Thông Báo (NotificationScreen)
+│     └── Hồ Sơ (ProfileScreen)
+├── DriverMain → DriverTabNavigator
+│     ├── Tổng quan (DriverHomeScreen)
+│     ├── Chuyến (DriverTripsScreen → DriverTripDetailScreen)
+│     ├── Thông Báo, Hồ Sơ
+├── BookRide → SeatSelection → CustomerInfo → Payment
+└── RouteVisualization (A* / OSM)
+```
+
+Sau đăng nhập, `utils/authNavigation.js` chuyển `user` → `Main`, `driver` → `DriverMain`.
 
 ## Cấu trúc `src/`
 
 ```
 src/
-  navigation/       # AppNavigator, MainTabNavigator, DriverTabNavigator
-  screens/          # Luồng khách + driver/*
-  components/       # UI tái dùng (SeatMap, form, layout)
-  hooks/            # useTicketPayment, useDriverTrips, useNotifications, v.v.
-  services/        # axios, socket, token storage, unread count
-  utils/           # format booking, auth navigation, map, thời gian
-  theme/           # màu, typography chung
-  assets/          # hình ảnh tĩnh
+  navigation/
+    AppNavigator.js
+    MainTabNavigator.js
+    DriverTabNavigator.js
+  screens/
+    LoginScreen.js, RegisterScreen.js, HomeScreen.js
+    BookRideScreen.js, SeatSelectionScreen.js, CustomerInfoScreen.js
+    PaymentScreen.js, RouteVisualizationScreen.js
+    RideHistoryScreen.js, NotificationScreen.js, ProfileScreen.js
+    driver/
+      DriverHomeScreen.js, DriverTripsScreen.js, DriverTripDetailScreen.js
+  hooks/
+    useEmailLogin.js, useRegisterProfile.js, useProfile.js
+    useTripSearch.js, useTripQuote.js, useSeatSelection.js, useCustomerBookingForm.js
+    useTicketPayment.js, useTicketHistory.js, useTicketRoutePlan.js
+    usePaymentCountdown.js, useBanners.js, useNotifications.js
+    useOsmRoute.js, useSeatSocket.js
+    useDriverDashboard.js, useDriverTrips.js, useDriverTripPassengers.js
+    useLogout.js, useCountdown.js
+  services/
+    axiosWithRefresh.js    # API_URL, axios instance
+    api.js                 # Hàm gọi REST theo domain
+    socket.js
+    tokenStorage.js
+    unreadCountStore.js
+  components/
+    SeatMap.js
+    ui/                    # PrimaryButton, TextField, GlassCard, ...
+  utils/
+    authNavigation.js, bookingFormatters.js, mapProjection.js
+    passengerGrouping.js, time.js
+  theme/
+    theme.js
+  assets/
+    images/
 ```
 
-Luồng điển hình (khách): **Login / Register → Main (tabs) → BookRide → SeatSelection → CustomerInfo → Payment**, có thể mở **RouteVisualization** (định tuyến) tùy chức năng build.
+## Luồng đặt vé (khách)
 
-Luồng tài xế: **`DriverMain`** (tabs riêng) — xem các màn `driver/` trong `screens/`.
+1. **Home** — banner (`useBanners`), tìm chuyến (`useTripSearch`).
+2. **BookRide** — chọn chuyến, báo giá (`useTripQuote`).
+3. **SeatSelection** — sơ đồ ghế, socket hold (`useSeatSocket`, `SeatMap`).
+4. **CustomerInfo** — điểm đón/trả, promo.
+5. **Payment** — thanh toán, countdown (`useTicketPayment`, `usePaymentCountdown`).
+6. **RouteVisualization** — tùy chọn, gọi `/api/routing/astar` (`useOsmRoute`).
 
-## Tên hiển thị & cấu hình Expo
+## Luồng tài xế
 
-- `app.json` — `expo.name`, `slug`, nền tảng (`ios`, `android`), hướng màn hình.
+- API: `GET /api/trips/driver/me`, `GET /api/trips/:id/passengers`.
+- Socket: `join_trips_list`, `join_trip` trên màn danh sách / chi tiết.
+- Hooks: `useDriverDashboard`, `useDriverTrips`, `useDriverTripPassengers`.
+
+## Cấu hình Expo
+
+`app.json` — `name`, `slug`, `orientation`, platform `ios` / `android`.
 
 ## Khắc phục thường gặp
 
 | Hiện tượng | Gợi ý |
 |------------|--------|
-| App không load JS bundle | Kiểm tra `REACT_NATIVE_PACKAGER_HOSTNAME` và firewall |
-| Lỗi network / timeout API | Ping được backend từ điện thoại; sửa `API_URL` đúng IP:port và CORS trên backend (Express đã `cors()` mở rộng) |
-| Socket không kết nối | Cùng `API_ORIGIN` với máy chủ Socket.IO và JWT hợp lệ |
+| Không load JS bundle | Đúng `REACT_NATIVE_PACKAGER_HOSTNAME` / IP Metro, tắt firewall |
+| Network error / timeout | Ping backend từ điện thoại; `API_URL` = IP LAN + cổng `5000` |
+| Socket không kết nối | `API_ORIGIN` trùng host Socket.IO; JWT còn hạn |
+| 401 liên tục | Đăng nhập lại; kiểm tra `JWT_SECRET` backend |
 
 ## Ghi chú
 
-Dự án có `typescript` trong devDependencies; phần lớn mã nguồn là **JavaScript** (`.js`). Nếu mở rộng có thể tăng cường type dần bằng JSDoc hoặc chuyển file sang `.ts`/`.tsx`.
+Mã nguồn chủ yếu **JavaScript** (`.js`). `typescript` trong devDependencies phục vụ tooling; có thể mở rộng `.ts`/`.tsx` sau.
+
+Tổng quan monorepo: [README.md](../README.md) · Backend: [backend/README.md](../backend/README.md)
