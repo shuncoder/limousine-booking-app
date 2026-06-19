@@ -5,6 +5,7 @@ import HomeScreen from '../screens/HomeScreen';
 import RideHistoryScreen from '../screens/RideHistoryScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import NotificationScreen from '../screens/NotificationScreen';
+import ComplaintsScreen from '../screens/ComplaintsScreen';
 import { Ionicons } from '@expo/vector-icons';
 import { useUnreadNotificationsCount } from '../hooks/useNotifications';
 
@@ -25,6 +26,8 @@ export default function MainTabNavigator() {
             iconName = 'car';
           } else if (route.name === 'Thông Báo') {
             iconName = 'notifications';
+          } else if (route.name === 'Khiếu nại') {
+            iconName = 'chatbubble-ellipses';
           } else if (route.name === 'Hồ Sơ') {
             iconName = 'person';
           }
@@ -48,6 +51,7 @@ export default function MainTabNavigator() {
           tabBarBadgeStyle: { backgroundColor: '#EF4444', color: '#fff' },
         }}
       />
+      <Tab.Screen name="Khiếu nại" component={ComplaintsScreen} />
       <Tab.Screen name="Hồ Sơ" component={ProfileScreen} />
     </Tab.Navigator>
   );

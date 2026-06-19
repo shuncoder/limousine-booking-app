@@ -1,3 +1,4 @@
+//rest parameters: ...allowedRoles gom nhiều đối số (arguments) thành một mảng
 module.exports = function requireRole(...allowedRoles) {
   return function (req, res, next) {
     const role = req.user?.role;
@@ -8,4 +9,3 @@ module.exports = function requireRole(...allowedRoles) {
   };
 };
 
-//rest parameters: ...allowedRoles gom nhiều đối số (arguments) thành một mảng

@@ -11,6 +11,7 @@ const complaintSchema = new mongoose.Schema(
 
     status: { type: String, enum: ['open', 'in_progress', 'resolved', 'rejected'], default: 'open', index: true },
     resolutionNote: { type: String, default: null },
+    statusUpdatedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

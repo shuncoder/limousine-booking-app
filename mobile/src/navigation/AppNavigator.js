@@ -11,6 +11,8 @@ import SeatSelectionScreen from '../screens/SeatSelectionScreen';
 import CustomerInfoScreen from '../screens/CustomerInfoScreen';
 import PaymentScreen from '../screens/PaymentScreen';
 import RouteVisualizationScreen from '../screens/RouteVisualizationScreen';
+import CreateComplaintScreen from '../screens/CreateComplaintScreen';
+import ComplaintDetailScreen from '../screens/ComplaintDetailScreen';
 import { colors } from '../theme/theme';
 
 const Stack = createStackNavigator();
@@ -60,6 +62,16 @@ export default function AppNavigator() {
           name="RouteVisualization"
           component={RouteVisualizationScreen}
           options={{ title: 'Định tuyến A*' }}
+        />
+        <Stack.Screen
+          name="CreateComplaint"
+          component={CreateComplaintScreen}
+          options={{ title: 'Gửi khiếu nại' }}
+        />
+        <Stack.Screen
+          name="ComplaintDetail"
+          component={ComplaintDetailScreen}
+          options={{ title: 'Chi tiết khiếu nại' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

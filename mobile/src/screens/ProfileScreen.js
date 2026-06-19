@@ -39,7 +39,7 @@ export default function ProfileScreen({ navigation }) {
       <AppBackground>
         <View style={styles.center}>
           <GlassCard style={styles.loadingCard}>
-            <ActivityIndicator size="large" color={colors.primary} />
+            <ActivityIndicator size="large" color={colors.brand} />
             <Text style={styles.loadingText}>Đang tải thông tin...</Text>
           </GlassCard>
         </View>
@@ -104,9 +104,11 @@ export default function ProfileScreen({ navigation }) {
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Chỉnh sửa hồ sơ</Text>
+              <Text style={styles.modalHint}>Cập nhật họ tên và số điện thoại của bạn</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Họ tên"
+                placeholderTextColor={colors.muted}
                 value={editName}
                 onChangeText={setEditName}
                 editable={!loading}
@@ -114,17 +116,18 @@ export default function ProfileScreen({ navigation }) {
               <TextInput
                 style={styles.input}
                 placeholder="Số điện thoại"
+                placeholderTextColor={colors.muted}
                 value={editPhone}
                 onChangeText={setEditPhone}
                 keyboardType="phone-pad"
                 editable={!loading}
               />
               <View style={styles.modalActions}>
-                <TouchableOpacity onPress={closeEditModal} disabled={loading}>
-                  <Text style={[styles.modalBtn, { color: colors.muted }]}>Hủy</Text>
+                <TouchableOpacity onPress={closeEditModal} disabled={loading} style={styles.modalCancelBtn}>
+                  <Text style={styles.modalCancelText}>Hủy</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={saveEdit} disabled={loading}>
-                  <Text style={[styles.modalBtn, { color: colors.primary, marginLeft: 24 }]}>
+                <TouchableOpacity onPress={saveEdit} disabled={loading} style={styles.modalSaveBtn}>
+                  <Text style={styles.modalSaveText}>
                     {loading ? 'Đang lưu...' : 'Lưu'}
                   </Text>
                 </TouchableOpacity>
@@ -146,11 +149,11 @@ export default function ProfileScreen({ navigation }) {
                 Bạn chắc chắn muốn xóa tài khoản? Hành động này không thể hoàn tác.
               </Text>
               <View style={styles.modalActions}>
-                <TouchableOpacity onPress={closeDeleteModal} disabled={loading}>
-                  <Text style={[styles.modalBtn, { color: colors.muted }]}>Hủy</Text>
+                <TouchableOpacity onPress={closeDeleteModal} disabled={loading} style={styles.modalCancelBtn}>
+                  <Text style={styles.modalCancelText}>Hủy</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={confirmDelete} disabled={loading}>
-                  <Text style={[styles.modalBtn, { color: colors.error, marginLeft: 24 }]}>
+                <TouchableOpacity onPress={confirmDelete} disabled={loading} style={styles.modalDeleteBtn}>
+                  <Text style={styles.modalDeleteText}>
                     {loading ? 'Đang xóa...' : 'Xóa'}
                   </Text>
                 </TouchableOpacity>
@@ -209,7 +212,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.brand,
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
@@ -242,10 +245,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: 'rgba(0,0,0,0.04)',
+    backgroundColor: 'rgba(79,124,255,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(79,124,255,0.35)',
   },
   editBtnText: {
-    color: colors.primary,
+    color: colors.brand,
     fontWeight: '700',
     fontSize: 14,
   },
@@ -259,7 +264,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,0,0,0.07)',
   },
   deleteBtnText: {
-    color: colors.error || '#e53935',
+    color: colors.danger,
     fontWeight: '700',
     fontSize: 14,
   },
@@ -268,47 +273,96 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.25)',
+    backgroundColor: 'rgba(4, 8, 18, 0.72)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: spacing.xl,
   },
   modalContent: {
-    width: 320,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: colors.surface2,
+    borderRadius: 18,
+    padding: spacing.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
     shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 10,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '900',
     color: colors.text,
-    marginBottom: 12,
+    marginBottom: 6,
+  },
+  modalHint: {
+    color: colors.muted,
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: spacing.lg,
+    lineHeight: 18,
   },
   modalBody: {
-    color: colors.muted,
-    marginVertical: 12,
+    color: 'rgba(234,240,255,0.78)',
+    marginVertical: spacing.md,
+    lineHeight: 20,
+    fontWeight: '600',
   },
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginTop: 16,
+    gap: spacing.sm,
+    marginTop: spacing.lg,
   },
-  modalBtn: {
-    fontSize: 16,
+  modalCancelBtn: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  modalCancelText: {
+    color: colors.muted,
+    fontSize: 15,
     fontWeight: '700',
+  },
+  modalSaveBtn: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: colors.brand,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  modalSaveText: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  modalDeleteBtn: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: 'rgba(239,68,68,0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.45)',
+  },
+  modalDeleteText: {
+    color: '#FCA5A5',
+    fontSize: 15,
+    fontWeight: '800',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#eee',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 12,
+    borderColor: 'rgba(255,255,255,0.28)',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: spacing.md,
     fontSize: 16,
     color: colors.text,
-    backgroundColor: '#fafbfc',
+    backgroundColor: 'rgba(255,255,255,0.10)',
   },
 });

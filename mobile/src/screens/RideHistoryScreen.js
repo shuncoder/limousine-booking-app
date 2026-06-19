@@ -169,6 +169,20 @@ export default function RideHistoryScreen({ navigation }) {
                           <Text style={styles.routeBtnText}>Xem đường đến điểm đón</Text>
                         </TouchableOpacity>
                       ) : null}
+                      <TouchableOpacity
+                        style={styles.complaintBtn}
+                        onPress={() => {
+                          const trip = item.tripId && typeof item.tripId === 'object' ? item.tripId : null;
+                          const routeLabel = trip ? `${trip.routeFrom} → ${trip.routeTo}` : 'Chuyến đi';
+                          navigation.navigate('CreateComplaint', {
+                            ticketId: item._id,
+                            tripId: trip?._id || (typeof item.tripId === 'string' ? item.tripId : undefined),
+                            defaultSubject: `Khiếu nại vé ${routeLabel}`,
+                          });
+                        }}
+                      >
+                        <Text style={styles.complaintBtnText}>Khiếu nại</Text>
+                      </TouchableOpacity>
                       {['pending', 'paid'].includes(item.status) ? (
                         <TouchableOpacity
                           style={styles.cancelBtn}
@@ -342,6 +356,19 @@ const styles = StyleSheet.create({
   },
   routeBtnText: {
     color: '#A5B4FC',
+    fontWeight: '900',
+    fontSize: 12,
+  },
+  complaintBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.6)',
+    backgroundColor: 'rgba(251,191,36,0.18)',
+  },
+  complaintBtnText: {
+    color: '#FCD34D',
     fontWeight: '900',
     fontSize: 12,
   },

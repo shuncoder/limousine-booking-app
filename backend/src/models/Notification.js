@@ -16,6 +16,7 @@ const notificationSchema = new mongoose.Schema(
         'ticket_cancelled',
         'ticket_expired',
         'driver_new_passenger',
+        'complaint_status_updated',
         'system',
       ],
       required: true,

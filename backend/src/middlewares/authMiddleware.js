@@ -8,7 +8,8 @@ module.exports = function (req, res, next) {
   }
 
   try {
-    const secret = process.env.JWT_SECRET || 'dev-jwt-secret';
+    const secret = process.env.JWT_SECRET;
+    console.log("JWT SECRET:", secret);
     const decoded = jwt.verify(token, secret);
 
     if (!decoded.user || !decoded.user.id) {

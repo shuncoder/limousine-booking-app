@@ -259,7 +259,7 @@ export type Complaint = {
   message: string;
   status: string;
   resolutionNote?: string | null;
-  userId?: { name?: string; email?: string } | string;
+  userId?: { _id?: string; name?: string; email?: string; phone?: string; role?: string } | string;
   createdAt: string;
 };
 

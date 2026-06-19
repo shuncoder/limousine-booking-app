@@ -21,6 +21,7 @@ const TYPE_META = {
   ticket_cancelled: { icon: 'close-circle-outline', color: '#FCA5A5' },
   ticket_expired: { icon: 'time-outline', color: '#94A3B8' },
   driver_new_passenger: { icon: 'people-outline', color: '#60A5FA' },
+  complaint_status_updated: { icon: 'chatbubble-ellipses-outline', color: '#FCD34D' },
   system: { icon: 'megaphone-outline', color: colors.brand },
 };
 

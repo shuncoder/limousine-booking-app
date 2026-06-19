@@ -5,8 +5,6 @@ const requireRole = require('../middlewares/requireRole');
 const {
   listUsers,
   updateUserRole,
-  listRides,
-  updateRide,
   listAdminNotifications,
   listDrivers,
   promoteUserToDriver,
@@ -22,8 +20,6 @@ router.get('/drivers', listDrivers);
 router.post('/drivers/:id/promote', promoteUserToDriver);
 router.post('/drivers/:id/demote', demoteDriver);
 
-router.get('/rides', listRides);
-router.patch('/rides/:id', updateRide);
 router.get('/notifications', listAdminNotifications);
 
 module.exports = router;

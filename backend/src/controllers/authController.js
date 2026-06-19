@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 const { hasMailerConfig, sendOtpEmail } = require('../config/mailer');
 const { createAdminLog } = require('../utils/adminAudit');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-jwt-secret';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // JWT-only logout: client clears stored token
 exports.logout = (_req, res) => {

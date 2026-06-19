@@ -4,7 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { cancelTicket, listMyTickets } from '../services/api';
 
 /**
- * Owns the data-side of RideHistoryScreen:
+ * Owns the data-side of the ticket history screen:
  *   - status filter
  *   - fetch + refresh + focus refetch
  *   - confirm-and-cancel ticket flow (with native Alert)

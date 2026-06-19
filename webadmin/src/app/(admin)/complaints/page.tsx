@@ -10,6 +10,17 @@ import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components
 import { adminListComplaints, Complaint, updateComplaint } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 
+function formatComplaintUser(userId: Complaint["userId"]) {
+  if (!userId || typeof userId === "string") {
+    return { name: "—", phone: "—", email: "—" };
+  }
+  return {
+    name: userId.name?.trim() || "Chưa cập nhật",
+    phone: userId.phone?.trim() || "Chưa cập nhật",
+    email: userId.email?.trim() || "—",
+  };
+}
+
 export default function ComplaintsPage() {
   const [items, setItems] = React.useState<Complaint[]>([]);
   const [loading, setLoading] = React.useState(false);
@@ -65,6 +76,7 @@ export default function ComplaintsPage() {
           <Table>
             <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
               <TableRow>
+                <TableCell isHeader className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400">Người khiếu nại</TableCell>
                 <TableCell isHeader className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400">Tiêu đề</TableCell>
                 <TableCell isHeader className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400">Nội dung</TableCell>
                 <TableCell isHeader className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400">Trạng thái</TableCell>
@@ -75,9 +87,15 @@ export default function ComplaintsPage() {
             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
               {items.map((c) => {
                 const current = edit[c._id] || { status: c.status, resolutionNote: c.resolutionNote || "" };
+                const user = formatComplaintUser(c.userId);
 
                 return (
                   <TableRow key={c._id}>
+                    <TableCell className="px-5 py-4 text-start">
+                      <div className="text-theme-sm font-semibold text-gray-800 dark:text-white/90">{user.name}</div>
+                      <div className="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">SĐT: {user.phone}</div>
+                      <div className="text-theme-xs text-gray-500 dark:text-gray-400">{user.email}</div>
+                    </TableCell>
                     <TableCell className="px-5 py-4 text-start text-theme-sm font-semibold text-gray-800 dark:text-white/90">{c.subject}</TableCell>
                     <TableCell className="px-5 py-4 text-start text-theme-sm text-gray-500 dark:text-gray-400">{c.message}</TableCell>
                     <TableCell className="px-5 py-4 text-start">
@@ -111,7 +129,7 @@ export default function ComplaintsPage() {
 
               {!items.length ? (
                 <TableRow>
-                  <TableCell className="px-5 py-6 text-theme-sm text-gray-500 dark:text-gray-400">{loading ? "Đang tải..." : "Chưa có khiếu nại"}</TableCell>
+                  <TableCell colSpan={6} className="px-5 py-6 text-theme-sm text-gray-500 dark:text-gray-400">{loading ? "Đang tải..." : "Chưa có khiếu nại"}</TableCell>
                 </TableRow>
               ) : null}
             </TableBody>

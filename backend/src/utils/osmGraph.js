@@ -37,7 +37,7 @@ const EARTH_RADIUS_M = 6371000;
 function toRad(deg) {
   return (deg * Math.PI) / 180;
 }
-
+// hàm tính khoảng cách giữa 2 điểm trên bề mặt trái đất theo công thức Haversine, trả về kết quả bằng mét
 function haversineMeters(aLat, aLon, bLat, bLon) {
   const dLat = toRad(bLat - aLat);
   const dLon = toRad(bLon - aLon);
@@ -48,7 +48,7 @@ function haversineMeters(aLat, aLon, bLat, bLon) {
   const a = sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon;
   return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(a));
 }
-
+// xác định file bản đồ OSM PBF để tải. Mặc định là backend/data/hanoi.osm.pbf, nhưng có thể ghi đè bằng biến môi trường OSM_PBF_PATH
 function defaultPbfPath() {
   if (process.env.OSM_PBF_PATH) return process.env.OSM_PBF_PATH;
   return path.resolve(__dirname, '..', '..', 'data', 'hanoi.osm.pbf');
@@ -61,11 +61,11 @@ function isOneway(tags) {
   const v = String(tags.oneway || '').toLowerCase();
   return v === 'yes' || v === 'true' || v === '1' || v === '-1';
 }
-
+//nếu thẻ oneway có giá trị là -1 thì đây là đường một chiều ngược lại, chỉ cho phép đi từ cuối đến đầu
 function isReverseOneway(tags) {
   return tags && String(tags.oneway || '').toLowerCase() === '-1';
 }
-
+//đọc , tạo graph , spatial index ,trả về graph dưới dạng Promise
 function loadGraphFromPbf(pbfPath) {
   return new Promise((resolve, reject) => {
     if (!fs.existsSync(pbfPath)) {
@@ -191,7 +191,7 @@ function buildSpatialIndex(nodes) {
 
   return { cellSize, buckets, keyFor };
 }
-
+// Hàm tìm node gần nhất trong graph với tọa độ lat, lon cho trước. Sử dụng spatial index để giới hạn số node cần tính khoảng cách
 function nearestNode(graph, lat, lon) {
   if (!graph) return null;
   const { grid, nodes } = graph;

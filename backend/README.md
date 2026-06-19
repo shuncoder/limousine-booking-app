@@ -64,9 +64,8 @@ Mount trong `src/index.js`:
 | `/api/notifications` | Thông báo in-app |
 | `/api/complaints` | Khiếu nại (user + admin) |
 | `/api/reports` | Báo cáo / thống kê (có thể dùng OpenAI) |
-| `/api/admin` | User, driver, ride, thông báo admin |
+| `/api/admin` | User, driver, thông báo admin |
 | `/api/routing` | `POST /astar` — định tuyến A\* |
-| `/api/rides` | Luồng đặt xe cũ (`book`, `history`) |
 
 **File tĩnh:** `GET /uploads/...` — thư mục `uploads/` tại cwd (ảnh banner, v.v.).
 
@@ -83,7 +82,7 @@ Phân quyền: `middlewares/authMiddleware.js` (JWT) + `middlewares/requireRole.
 | `Promo`, `Banner` | Khuyến mãi, banner |
 | `Notification`, `AdminNotification` | Thông báo |
 | `Complaint` | Khiếu nại |
-| `Ride` | Booking luồng cũ |
+| `ComplaintStatusHistory` | Lịch sử thay đổi trạng thái khiếu nại |
 
 ## Socket.IO
 
@@ -119,10 +118,11 @@ src/
     authController.js, tripController.js, ticketController.js
     seatHoldController.js, routingController.js, reportController.js
     bannerController.js, promoController.js, complaintController.js
-    notificationController.js, adminController.js, rideController.js, userController.js
+    notificationController.js, adminController.js, userController.js
   models/
-    User.js, Trip.js, Ticket.js, SeatHold.js, Ride.js
-    Promo.js, Banner.js, Notification.js, AdminNotification.js, Complaint.js
+    User.js, Trip.js, Ticket.js, SeatHold.js
+    Promo.js, Banner.js, Notification.js, AdminNotification.js
+    Complaint.js, ComplaintStatusHistory.js
   routes/               # Router tương ứng từng nhóm /api/*
   middlewares/
     authMiddleware.js, requireRole.js

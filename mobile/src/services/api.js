@@ -68,17 +68,6 @@ export const deleteAccount = async () => {
   return res.data;
 };
 
-export const bookRide = async (pickupLocation, dropoffLocation) => {
-  if (!pickupLocation || !dropoffLocation) throw new Error('Vui lòng chọn đầy đủ điểm đón và trả');
-  const res = await api.post('/rides/book', { pickupLocation, dropoffLocation }, { headers: await authHeaders() });
-  return res.data;
-};
-
-export const getRideHistory = async () => {
-  const res = await api.get('/rides/history', { headers: await authHeaders() });
-  return res.data;
-};
-
 export const getTripSeats = async (tripId) => {
   if (!tripId) throw new Error('Thiếu tripId');
   const res = await api.get(`/trips/${tripId}/seats`, { headers: await authHeaders() });
@@ -312,6 +301,50 @@ export const getActiveBanners = async () => {
   const res = await api.get('/banners?active=true');
   const items = Array.isArray(res.data?.items) ? res.data.items : [];
   return items.map((item) => ({ ...item, fullImageUrl: resolveAssetUrl(item.imageUrl) }));
+};
+
+export const createComplaint = async ({ subject, message, ticketId, tripId } = {}) => {
+  if (!subject?.trim()) throw new Error('Vui lòng nhập tiêu đề khiếu nại');
+  if (!message?.trim()) throw new Error('Vui lòng nhập nội dung khiếu nại');
+  const res = await api.post(
+    '/complaints',
+    {
+      subject: subject.trim(),
+      message: message.trim(),
+      ticketId: ticketId || undefined,
+      tripId: tripId || undefined,
+    },
+    { headers: await authHeaders() }
+  );
+  return res.data;
+};
+
+export const listMyComplaints = async ({ page = 1, limit = 50, status } = {}) => {
+  const params = new URLSearchParams();
+  params.set('page', String(page));
+  params.set('limit', String(limit));
+  if (status) params.set('status', String(status));
+
+  const res = await api.get(`/complaints/me?${params.toString()}`, {
+    headers: await authHeaders(),
+  });
+  return {
+    items: Array.isArray(res.data?.items) ? res.data.items : [],
+    total: Number(res.data?.total || 0),
+    page: Number(res.data?.page || page),
+    limit: Number(res.data?.limit || limit),
+  };
+};
+
+export const getMyComplaint = async (complaintId) => {
+  if (!complaintId) throw new Error('Thiếu mã khiếu nại');
+  const res = await api.get(`/complaints/me/${complaintId}`, {
+    headers: await authHeaders(),
+  });
+  return {
+    complaint: res.data?.complaint || null,
+    history: Array.isArray(res.data?.history) ? res.data.history : [],
+  };
 };
 
 export const logout = async () => {

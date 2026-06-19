@@ -46,8 +46,6 @@ Chi tiết từng phần: [backend/README.md](backend/README.md) · [mobile/READ
 3. Socket.IO phát `seat_hold`, `seat_update`, `trip_seat_count` cho màn chọn ghế / danh sách chuyến.
 4. Background jobs (`seatHoldWatcher`, `seatJobs`) hủy giữ ghế / vé hết hạn.
 
-Ngoài ra vẫn có nhóm API **`/api/rides`** (model `Ride`) — luồng đặt xe ban đầu; luồng hiện tại ưu tiên **Trip + Ticket + SeatHold**.
-
 ## Cấu trúc thư mục
 
 ```

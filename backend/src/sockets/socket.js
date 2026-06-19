@@ -18,7 +18,7 @@ function initSocket(server) {
       const token = socket.handshake.auth?.token;
       if (!token) return next(new Error('Unauthorized'));
 
-      const secret = process.env.JWT_SECRET || 'dev-jwt-secret';
+      const secret = process.env.JWT_SECRET;
       const decoded = jwt.verify(token, secret);
 
       socket.user = decoded.user;
@@ -45,10 +45,6 @@ function initSocket(server) {
       if (!tripId) return;
       socket.leave(`trip:${tripId}`);
     });
-
-    // Used by trip-list views (search results, driver dashboard, admin trips page)
-    // so they can receive aggregate seat-count updates without subscribing to
-    // every trip individually.
     socket.on('join_trips_list', () => {
       socket.join(TRIPS_LIST_ROOM);
     });
@@ -89,14 +85,6 @@ function emitNotification(userId, notification) {
   io.to(userRoom(userId)).emit('notification:new', notification);
 }
 
-/**
- * Recompute the live booked/held/available counts for a trip and broadcast
- * a `trip_seat_count` event to:
- *   - the per-trip room (`trip:<id>`) for detail views, and
- *   - the shared `trips_list` room for list/dashboard views.
- *
- * Imported lazily to avoid a circular require with the models.
- */
 async function emitTripSeatCount(tripId) {
   if (!io || !tripId) return;
   try {

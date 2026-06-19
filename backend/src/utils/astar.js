@@ -23,7 +23,7 @@ class MinHeap {
   }
   _bubbleUp(i) {
     const arr = this.data;
-    while (i > 0) {
+    while (i > 0) { 
       const parent = (i - 1) >> 1;
       if (arr[parent].f <= arr[i].f) break;
       [arr[parent], arr[i]] = [arr[i], arr[parent]];
@@ -69,6 +69,7 @@ function heuristic(a, b) {
  *   runtimeMs: number,
  * }}
  */
+//hàm chạy thuật toán A* , trả về kết quả có thể đi được hay không
 function astar(graph, startId, goalId) {
   const startedAt = Date.now();
 
@@ -173,7 +174,7 @@ function astar(graph, startId, goalId) {
     runtimeMs: Date.now() - startedAt,
   };
 }
-
+// xây dựng đường đi cuối cùng từ cameFrom map
 function reconstructPath(cameFrom, endId, nodes) {
   const path = [];
   let cur = endId;

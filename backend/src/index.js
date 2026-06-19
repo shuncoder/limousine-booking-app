@@ -19,7 +19,6 @@ app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
 
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/users', require('./routes/users'));
-app.use('/api/rides', require('./routes/rides'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/trips', require('./routes/trips'));
 app.use('/api/tickets', require('./routes/tickets'));
