@@ -132,7 +132,7 @@ export type CreateTripInput = {
 };
 
 export async function listTrips(token: string) {
-  return apiFetch<{ items: Trip[] }>(`/trips?page=1&limit=100`, { token });
+  return apiFetch<{ items: Trip[] }>(`/trips?page=1&limit=100&sort=createdAtDesc`, { token });
 }
 
 export async function createTrip(token: string, input: CreateTripInput) {
@@ -375,4 +375,3 @@ export async function uploadBanner(token: string, file: File) {
 export async function deleteBanner(token: string, bannerId: string) {
   return apiFetch<{ ok: true; id: string }>(`/banners/${bannerId}`, { token, method: "DELETE" });
 }
-

@@ -12,18 +12,6 @@ function isValidLatLng(p) {
 function toLatLon(p) {
   return { lat: Number(p.lat), lon: Number(p.lng) };
 }
-
-/**
- * POST /api/routing/astar
- * Body: { from: { lat, lng }, to: { lat, lng } }
- * Returns: {
- *   from, to,
- *   start: { id, lat, lng, snapDistance },
- *   goal:  { id, lat, lng, snapDistance },
- *   path:  Array<{ lat, lng }>,
- *   distance, nodesExplored, runtimeMs, reachable
- * }
- */
 exports.runAstar = async (req, res) => {
   try {
     const { from, to } = req.body || {};

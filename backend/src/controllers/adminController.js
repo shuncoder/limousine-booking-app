@@ -11,6 +11,7 @@ exports.listUsers = async (req, res) => {
   try {
     const page = Math.max(1, toInt(req.query.page, 1));
     const limit = Math.min(100, Math.max(1, toInt(req.query.limit, 20)));
+    const skip = (page - 1) * limit;
 
     const filter = {};
     if (req.query.role) {
@@ -28,12 +29,14 @@ exports.listUsers = async (req, res) => {
       User.find(filter)
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit),
+        .limit(limit)
+        .select('-otpHash -otpExpiresAt -passwordHash'),
       User.countDocuments(filter),
     ]);
 
     res.json({ items, page, limit, total });
   } catch (err) {
+    console.error('List users error:', err);
     res.status(500).json({ msg: 'Server error' });
   }
 };

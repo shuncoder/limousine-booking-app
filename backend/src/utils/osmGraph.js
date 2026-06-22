@@ -131,7 +131,7 @@ function loadGraphFromPbf(pbfPath) {
         // not used for routing
       },
       endDocument() {
-        // Drop nodes that are not connected (not part of any kept way).
+        // Drop nodes that are not connected (not part of any kept way)
         const kept = new Map();
         for (const [id, list] of adj.entries()) {
           if (list.length === 0) continue;

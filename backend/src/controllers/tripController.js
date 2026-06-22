@@ -164,8 +164,13 @@ exports.listTrips = async (req, res) => {
       }
     }
 
+    const sort =
+      req.query.sort === 'createdAtDesc'
+        ? { createdAt: -1, _id: -1 }
+        : { departureAt: 1 };
+
     const [items, total] = await Promise.all([
-      Trip.find(query).sort({ departureAt: 1 }).skip(skip).limit(limit),
+      Trip.find(query).sort(sort).skip(skip).limit(limit),
       Trip.countDocuments(query),
     ]);
 

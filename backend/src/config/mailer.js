@@ -1,6 +1,7 @@
 const nodemailer = require('nodemailer');
 
 function hasMailerConfig() {
+  //ép kiểu
   return !!(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD);
 }
 
