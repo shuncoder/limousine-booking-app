@@ -17,9 +17,9 @@ import { formatDayTimeShort } from '../../utils/bookingFormatters';
 
 export default function DriverHomeScreen({ navigation }) {
   const {
+    trips,
     todayTrips,
     totalBookedToday,
-    nextTrip,
     unread,
     loading,
     refreshing,
@@ -77,31 +77,34 @@ export default function DriverHomeScreen({ navigation }) {
             <View style={styles.center}>
               <ActivityIndicator color={colors.text} />
             </View>
-          ) : nextTrip ? (
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() =>
-                navigation.navigate('Chuyến', {
-                  screen: 'DriverTripDetail',
-                  params: { tripId: String(nextTrip._id), trip: nextTrip },
-                })
-              }
-              style={styles.tripRow}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={styles.route}>
-                  {nextTrip.routeFrom} → {nextTrip.routeTo}
-                </Text>
-                <Text style={styles.subtle}>
-                  {formatDayTimeShort(nextTrip.departureAt)} • Xe{' '}
-                  {nextTrip.vehicleName || '--'}
-                </Text>
-                <Text style={[styles.subtle, { color: colors.brand2 }]}>
-                  {nextTrip.bookedSeats || 0}/{nextTrip.totalSeats || 0} khách đã đặt
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={22} color={colors.muted} />
-            </TouchableOpacity>
+          ) : trips.length ? (
+            trips.slice(0, 5).map((trip) => (
+              <TouchableOpacity
+                key={String(trip._id)}
+                activeOpacity={0.85}
+                onPress={() =>
+                  navigation.navigate('Chuyến', {
+                    screen: 'DriverTripDetail',
+                    params: { tripId: String(trip._id), trip },
+                  })
+                }
+                style={styles.tripRow}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.route}>
+                    {trip.routeFrom} → {trip.routeTo}
+                  </Text>
+                  <Text style={styles.subtle}>
+                    {formatDayTimeShort(trip.departureAt)} • Xe{' '}
+                    {trip.vehicleName || '--'}
+                  </Text>
+                  <Text style={[styles.subtle, { color: colors.brand2 }]}>
+                    {trip.bookedSeats || 0}/{trip.totalSeats || 0} khách đã đặt
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={22} color={colors.muted} />
+              </TouchableOpacity>
+            ))
           ) : (
             <Text style={styles.empty}>
               Chưa có chuyến nào sắp tới được phân công cho bạn.

@@ -43,7 +43,7 @@ function haversineMeters(aLat, aLng, bLat, bLng) {
 
 /**
  * @param {object} args
- * @param {string|object} [args.seed]    kept for backwards-compat (ignored)
+ * @param {string|object} [args.seed]  
  * @param {{lat:number,lng:number,name?:string,address?:string}} args.pickupPoint
  */
 function buildRoutePlan({ seed, pickupPoint } = {}) {

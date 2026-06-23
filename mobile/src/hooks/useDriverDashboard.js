@@ -73,13 +73,10 @@ export default function useDriverDashboard() {
     [todayTrips]
   );
 
-  const nextTrip = trips[0] || null;
-
   return {
     trips,
     todayTrips,
     totalBookedToday,
-    nextTrip,
     unread,
     loading,
     refreshing,

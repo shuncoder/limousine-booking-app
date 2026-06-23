@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { listTrips } from '../services/api';
 
+function formatLocalDateParam(date) {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 /**
  * Encapsulates trip-search logic so screens stay declarative:
  *  - loads the initial pickup/dropoff option universe,
@@ -54,7 +62,7 @@ export default function useTripSearch() {
     setLoading(true);
     setErrorMessage('');
     try {
-      const dateParam = travelDate ? travelDate.toISOString().slice(0, 10) : '';
+      const dateParam = formatLocalDateParam(travelDate);
       const res = await listTrips({
         routeFrom: pickup,
         routeTo: dropoff,

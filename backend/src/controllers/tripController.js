@@ -59,6 +59,7 @@ exports.createTrip = async (req, res) => {
       routeTo,
       departureAt,
       vehicleName,
+      driverId,
       basePrice,
       currency,
       seatLayout,
@@ -117,6 +118,7 @@ exports.createTrip = async (req, res) => {
       routeTo,
       departureAt,
       vehicleName: vehicleName ?? null,
+      driverId: driverId || null,
       basePrice,
       currency: currency || 'VND',
       seatLayout: finalSeatLayout,
@@ -380,7 +382,9 @@ exports.listMyDriverTrips = async (req, res) => {
     if (req.query.status) query.status = String(req.query.status);
 
     if (req.query.upcoming === 'true') {
-      query.departureAt = { $gte: new Date() };
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      query.departureAt = { $gte: startOfToday };
     }
 
     const [items, total] = await Promise.all([
